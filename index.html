@@ -210,8 +210,8 @@ const DET={
 };
 const MIN_NEG=3;
 // Entwurf: Einrichtungen rund um den Westerwald (Stand Okt. 2026, bitte vor Ort prüfen). Zeilen mit # = Überschrift in der Auswahlliste.
-const KL_FAV=["DRK-Krankenhaus Hachenburg","Diakonie Klinikum Kirchen","Brüderkrankenhaus Montabaur","Herz-Jesu-Krankenhaus Dernbach","Marienhaus St. Elisabeth Neuwied","GKM Kemperhof Koblenz","GKM Ev. Stift St. Martin Koblenz","Bundeswehrzentralkrankenhaus Koblenz","Diakonie Klinikum Jung-Stilling Siegen","Kreisklinikum Siegen","Dill-Kliniken Dillenburg","St. Vincenz Limburg"];
-const KL_MORE=["# Rheinland-Pfalz","Ev. Krankenhaus Selters","DRK-Krankenhaus Neuwied","Kath. Klinikum Koblenz, Brüderhaus","Kath. Klinikum Koblenz, Marienhof","GKM St. Elisabeth Mayen","St. Nikolaus-Stiftshospital Andernach","GKM Paulinenstift Nastätten","GKM Heilig Geist Boppard","Hunsrück Klinik Simmern","Marienhaus Klinikum Bad Neuenahr-Ahrweiler","Universitätsmedizin Mainz","Kath. Klinikum Mainz","# Nordrhein-Westfalen","Marien Kliniken Siegen","DRK-Kinderklinik Siegen","Diakonie Klinikum Bethesda Freudenberg","St. Martinus-Hospital Olpe","Helios Klinik Attendorn","St. Josef-Hospital Lennestadt","Kreiskrankenhaus Waldbröl","Kreiskrankenhaus Gummersbach","Helios Klinikum Siegburg","GFO Kliniken Troisdorf","Asklepios Kinderklinik Sankt Augustin","GFO Klinik Bad Honnef","Krankenhaus Rheinbach","Universitätsklinikum Bonn","Johanniter-Krankenhaus Bonn","Johanniter Waldkrankenhaus Bonn","GFO St. Marien-Hospital Bonn","GFO St. Josef-Hospital Bonn-Beuel","Gemeinschaftskrankenhaus Bonn","Malteser Krankenhaus Bonn/Rhein-Sieg","Helios Klinikum Bonn/Rhein-Sieg","Marienhospital Euskirchen","Kreiskrankenhaus Mechernich","# Hessen","Klinikum Wetzlar","Kreiskrankenhaus Weilburg","Universitätsklinikum Gießen","Ev. Krankenhaus Mittelhessen Gießen","Hochtaunus-Kliniken Usingen","Helios HSK Wiesbaden","St. Josefs-Hospital Wiesbaden","Asklepios Paulinen Klinik Wiesbaden","St. Josefs-Hospital Rheingau Rüdesheim"];
+const KL_FAV=["DRK-Krankenhaus Hachenburg","Diakonie Klinikum Kirchen","Brüderkrankenhaus Montabaur","Herz-Jesu-Krankenhaus Dernbach","Ev. Krankenhaus Selters","Marienhaus St. Elisabeth Neuwied","GKM Kemperhof Koblenz","GKM Ev. Stift St. Martin Koblenz","Bundeswehrzentralkrankenhaus Koblenz","Diakonie Klinikum Jung-Stilling Siegen","Kreisklinikum Siegen","Dill-Kliniken Dillenburg","St. Vincenz Limburg"];
+const KL_MORE=["# Rheinland-Pfalz","DRK-Krankenhaus Neuwied","Kath. Klinikum Koblenz, Brüderhaus","Kath. Klinikum Koblenz, Marienhof","GKM St. Elisabeth Mayen","St. Nikolaus-Stiftshospital Andernach","GKM Paulinenstift Nastätten","GKM Heilig Geist Boppard","Hunsrück Klinik Simmern","Marienhaus Klinikum Bad Neuenahr-Ahrweiler","Universitätsmedizin Mainz","Kath. Klinikum Mainz","# Nordrhein-Westfalen","Marien Kliniken Siegen","DRK-Kinderklinik Siegen","Diakonie Klinikum Bethesda Freudenberg","St. Martinus-Hospital Olpe","Helios Klinik Attendorn","St. Josef-Hospital Lennestadt","Kreiskrankenhaus Waldbröl","Kreiskrankenhaus Gummersbach","Helios Klinikum Siegburg","GFO Kliniken Troisdorf","Asklepios Kinderklinik Sankt Augustin","GFO Klinik Bad Honnef","Krankenhaus Rheinbach","Universitätsklinikum Bonn","Johanniter-Krankenhaus Bonn","Johanniter Waldkrankenhaus Bonn","GFO St. Marien-Hospital Bonn","GFO St. Josef-Hospital Bonn-Beuel","Gemeinschaftskrankenhaus Bonn","Malteser Krankenhaus Bonn/Rhein-Sieg","Helios Klinikum Bonn/Rhein-Sieg","Marienhospital Euskirchen","Kreiskrankenhaus Mechernich","# Hessen","Klinikum Wetzlar","Kreiskrankenhaus Weilburg","Universitätsklinikum Gießen","Ev. Krankenhaus Mittelhessen Gießen","Hochtaunus-Kliniken Usingen","Helios HSK Wiesbaden","St. Josefs-Hospital Wiesbaden","Asklepios Paulinen Klinik Wiesbaden","St. Josefs-Hospital Rheingau Rüdesheim"];
 const LS_FAV=["ILS Montabaur","ILS Koblenz","Leitstelle Siegen-Wittgenstein","Leitstelle Lahn-Dill","Leitstelle Limburg-Weilburg"];
 const LS_MORE=["# Nordrhein-Westfalen","Leitstelle Kreis Olpe","Leitstelle Oberbergischer Kreis","Leitstelle Rhein-Sieg-Kreis","Leitstelle Bonn","Leitstelle Kreis Euskirchen","# Hessen","Leitstelle Rheingau-Taunus","Leitstelle Wiesbaden"];
 const KEY="status1.v1";
@@ -220,6 +220,7 @@ function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{
 function load(){
   try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);const b=blank();const s=Object.assign(b.settings,o.settings||{});
     if(JSON.stringify(s.kliniken)==='["Klinik A","Klinik B","Klinik C"]'){s.kliniken=KL_FAV;s.klinikenMore=KL_MORE}
+    if(!s.kliniken.includes("Ev. Krankenhaus Selters")&&(s.klinikenMore||[]).includes("Ev. Krankenhaus Selters")&&s.kliniken.join("|")===KL_FAV.filter(x=>x!=="Ev. Krankenhaus Selters").join("|")){s.kliniken=KL_FAV;s.klinikenMore=s.klinikenMore.filter(x=>x!=="Ev. Krankenhaus Selters")}
     if(JSON.stringify(s.leitstellen)==='["Leitstelle"]'){s.leitstellen=LS_FAV;s.leitstellenMore=LS_MORE}
     return Object.assign(b,o,{settings:s})}}catch(e){}
   return blank();
@@ -337,7 +338,7 @@ function vHome(){
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
     <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Kliniken, PIN, Einsatzart</span></button>
    </div>
-   <p class="small">Version 0.2.1 · Alle Daten bleiben auf diesem Gerät.</p>
+   <p class="small">Version 0.2.2 · Alle Daten bleiben auf diesem Gerät.</p>
   </div>`;
 }
 
