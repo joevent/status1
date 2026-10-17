@@ -113,6 +113,9 @@ h2{font-size:34px}
 .detail{grid-column:1/-1;background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .dlabel{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .minis{display:flex;flex-wrap:wrap;gap:6px}
+.msel{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 10px;font-size:15px;max-width:100%}
+.mode-pos .msel.on{border-color:var(--pos);background:var(--pos-bg);font-weight:600}
+.mode-neg .msel.on{border-color:var(--neg);background:var(--neg-bg);font-weight:600}
 .mini{min-height:40px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);padding:6px 12px;font-size:15px}
 .mode-pos .mini[aria-pressed="true"]{background:var(--pos-bg);border-color:var(--pos);font-weight:600}
 .mode-neg .mini[aria-pressed="true"]{background:var(--neg-bg);border-color:var(--neg);font-weight:600}
@@ -206,11 +209,19 @@ const DET={
  eig:{asp:["Aggression / Gewalt","Verkehr","Infektionsschutz","Absicherung der Einsatzstelle"]}
 };
 const MIN_NEG=3;
+// Entwurf: Einrichtungen rund um den Westerwald (Stand Okt. 2026, bitte vor Ort prüfen). Zeilen mit # = Überschrift in der Auswahlliste.
+const KL_FAV=["DRK-Krankenhaus Hachenburg","Diakonie Klinikum Kirchen","Brüderkrankenhaus Montabaur","Herz-Jesu-Krankenhaus Dernbach","Marienhaus St. Elisabeth Neuwied","GKM Kemperhof Koblenz","GKM Ev. Stift St. Martin Koblenz","Bundeswehrzentralkrankenhaus Koblenz","Diakonie Klinikum Jung-Stilling Siegen","Kreisklinikum Siegen","Dill-Kliniken Dillenburg","St. Vincenz Limburg"];
+const KL_MORE=["# Rheinland-Pfalz","Ev. Krankenhaus Selters","DRK-Krankenhaus Neuwied","Kath. Klinikum Koblenz, Brüderhaus","Kath. Klinikum Koblenz, Marienhof","GKM St. Elisabeth Mayen","St. Nikolaus-Stiftshospital Andernach","GKM Paulinenstift Nastätten","GKM Heilig Geist Boppard","Hunsrück Klinik Simmern","Marienhaus Klinikum Bad Neuenahr-Ahrweiler","Universitätsmedizin Mainz","Kath. Klinikum Mainz","# Nordrhein-Westfalen","Marien Kliniken Siegen","DRK-Kinderklinik Siegen","Diakonie Klinikum Bethesda Freudenberg","St. Martinus-Hospital Olpe","Helios Klinik Attendorn","St. Josef-Hospital Lennestadt","Kreiskrankenhaus Waldbröl","Kreiskrankenhaus Gummersbach","Helios Klinikum Siegburg","GFO Kliniken Troisdorf","Asklepios Kinderklinik Sankt Augustin","GFO Klinik Bad Honnef","Krankenhaus Rheinbach","Universitätsklinikum Bonn","Johanniter-Krankenhaus Bonn","Johanniter Waldkrankenhaus Bonn","GFO St. Marien-Hospital Bonn","GFO St. Josef-Hospital Bonn-Beuel","Gemeinschaftskrankenhaus Bonn","Malteser Krankenhaus Bonn/Rhein-Sieg","Helios Klinikum Bonn/Rhein-Sieg","Marienhospital Euskirchen","Kreiskrankenhaus Mechernich","# Hessen","Klinikum Wetzlar","Kreiskrankenhaus Weilburg","Universitätsklinikum Gießen","Ev. Krankenhaus Mittelhessen Gießen","Hochtaunus-Kliniken Usingen","Helios HSK Wiesbaden","St. Josefs-Hospital Wiesbaden","Asklepios Paulinen Klinik Wiesbaden","St. Josefs-Hospital Rheingau Rüdesheim"];
+const LS_FAV=["ILS Montabaur","ILS Koblenz","Leitstelle Siegen-Wittgenstein","Leitstelle Lahn-Dill","Leitstelle Limburg-Weilburg"];
+const LS_MORE=["# Nordrhein-Westfalen","Leitstelle Kreis Olpe","Leitstelle Oberbergischer Kreis","Leitstelle Rhein-Sieg-Kreis","Leitstelle Bonn","Leitstelle Kreis Euskirchen","# Hessen","Leitstelle Rheingau-Taunus","Leitstelle Wiesbaden"];
 const KEY="status1.v1";
 
-function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{},asp:{},demo:false,settings:{askCat:false,pin:"0000",kliniken:["Klinik A","Klinik B","Klinik C"],leitstellen:["Leitstelle"]}}}
+function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{},asp:{},demo:false,settings:{askCat:false,pin:"0000",kliniken:KL_FAV,klinikenMore:KL_MORE,leitstellen:LS_FAV,leitstellenMore:LS_MORE}}}
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);const b=blank();return Object.assign(b,o,{settings:Object.assign(b.settings,o.settings||{})})}}catch(e){}
+  try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);const b=blank();const s=Object.assign(b.settings,o.settings||{});
+    if(JSON.stringify(s.kliniken)==='["Klinik A","Klinik B","Klinik C"]'){s.kliniken=KL_FAV;s.klinikenMore=KL_MORE}
+    if(JSON.stringify(s.leitstellen)==='["Leitstelle"]'){s.leitstellen=LS_FAV;s.leitstellenMore=LS_MORE}
+    return Object.assign(b,o,{settings:s})}}catch(e){}
   return blank();
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
@@ -252,14 +263,22 @@ function chipGrid(sel,mode){
      if(D&&sel.has(id)){
        const d=det[id]||{place:null,asp:[]};
        const pl=D.places?(db.settings[D.places]||[]):[];
+       const more=D.places?(db.settings[D.places+"More"]||[]):[];
+       const inMore=more.includes(d.place);
        h+=`<div class="detail"><div class="small"><b>${esc(n)}</b> genauer, wenn ihr wollt${D.places?" · nur Einrichtungen, nie Personen":""}</div>`+
-        (pl.length?`<div class="dlabel">Wo?</div><div class="minis">${pl.map(p=>`<button class="mini" data-a="dplace" data-id="${id}" data-mode="${mode}" data-v="${esc(p)}" aria-pressed="${d.place===p}">${esc(p)}</button>`).join("")}</div>`:"")+
+        ((pl.length||more.length)?`<div class="dlabel">Wo?</div><div class="minis">${pl.map(p=>`<button class="mini" data-a="dplace" data-id="${id}" data-mode="${mode}" data-v="${esc(p)}" aria-pressed="${d.place===p}">${esc(p)}</button>`).join("")}</div>${more.length?`<select class="msel${inMore?" on":""}" data-id="${id}" data-mode="${mode}" aria-label="Weitere Einrichtungen"><option value="">${inMore?"– keine Auswahl –":"Weitere …"}</option>${optList(more,d.place)}</select>`:""}`:"")+
         `<div class="dlabel">Was genau?</div><div class="minis">${D.asp.map(x=>`<button class="mini" data-a="dasp" data-id="${id}" data-mode="${mode}" data-v="${esc(x)}" aria-pressed="${d.asp.includes(x)}">${esc(x)}</button>`).join("")}</div>`+
         (mode==="neg"&&D.places?`<div class="small">Eine Einrichtung erscheint in der Auswertung erst ab ${MIN_NEG} Nennungen.</div>`:"")+`</div>`;
      }
      return h;
    }).join("")+
    `</div></div>`).join("")+`</div>`;
+}
+function optList(list,sel){
+  let h="",open=false;
+  list.forEach(p=>{if(p.startsWith("#")){if(open)h+="</optgroup>";h+=`<optgroup label="${esc(p.slice(1).trim())}">`;open=true}
+    else h+=`<option value="${esc(p)}"${sel===p?" selected":""}>${esc(p)}</option>`});
+  return h+(open?"</optgroup>":"");
 }
 function detailHtml(id){
   const D=DET[id];if(!D)return "";
@@ -318,7 +337,7 @@ function vHome(){
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
     <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Kliniken, PIN, Einsatzart</span></button>
    </div>
-   <p class="small">Version 0.2 · Alle Daten bleiben auf diesem Gerät.</p>
+   <p class="small">Version 0.2.1 · Alle Daten bleiben auf diesem Gerät.</p>
   </div>`;
 }
 
@@ -494,10 +513,15 @@ function vSettings(){
    </div>
    <div class="card stack" style="gap:10px"><h3>Einrichtungen für Ortsangaben</h3>
     <p class="small" style="margin:0">Eine pro Zeile. Nur Einrichtungen, keine Personen.</p>
-    <label class="small" for="kliniken">Kliniken / Notaufnahmen</label>
-    <textarea id="kliniken" rows="4">${esc((db.settings.kliniken||[]).join("\n"))}</textarea>
-    <label class="small" for="leitstellen">Leitstellen</label>
-    <textarea id="leitstellen" rows="2">${esc((db.settings.leitstellen||[]).join("\n"))}</textarea>
+    <p class="small" style="margin:0">Häufig angefahrene erscheinen als Schaltflächen, alle weiteren in einer Auswahlliste. Zeilen mit # am Anfang sind Überschriften in der Liste.</p>
+    <label class="small" for="kliniken">Kliniken – häufig (Schaltflächen)</label>
+    <textarea id="kliniken" rows="6">${esc((db.settings.kliniken||[]).join("\n"))}</textarea>
+    <label class="small" for="klinikenMore">Kliniken – weitere (Auswahlliste)</label>
+    <textarea id="klinikenMore" rows="8">${esc((db.settings.klinikenMore||[]).join("\n"))}</textarea>
+    <label class="small" for="leitstellen">Leitstellen – häufig (Schaltflächen)</label>
+    <textarea id="leitstellen" rows="4">${esc((db.settings.leitstellen||[]).join("\n"))}</textarea>
+    <label class="small" for="leitstellenMore">Leitstellen – weitere (Auswahlliste)</label>
+    <textarea id="leitstellenMore" rows="5">${esc((db.settings.leitstellenMore||[]).join("\n"))}</textarea>
     ${ui.listMsg?`<div class="small">${ui.listMsg}</div>`:""}
     <button class="btn" data-a="savelists">Listen speichern</button>
    </div>
@@ -573,8 +597,8 @@ app.addEventListener("click",e=>{
   else if(a==="tag"){const m=b.dataset.mode,s=m==="pos"?run.pos:run.neg,id=b.dataset.id;if(s.has(id)){s.delete(id);delete run.det[m][id]}else s.add(id);if(DET[id])render();else b.setAttribute("aria-pressed",s.has(id))}
   else if(a==="dplace"||a==="dasp"){const m=b.dataset.mode,id=b.dataset.id,v=b.dataset.v;const d=run.det[m][id]=run.det[m][id]||{place:null,asp:[]};
     if(a==="dplace")d.place=d.place===v?null:v;else{const i=d.asp.indexOf(v);i<0?d.asp.push(v):d.asp.splice(i,1)}render()}
-  else if(a==="savelists"){const rd=x=>((document.getElementById(x)||{}).value||"").split("\n").map(s=>s.replace(/\|/g,"/").trim()).filter(Boolean).slice(0,20);
-    db.settings.kliniken=rd("kliniken");db.settings.leitstellen=rd("leitstellen");save();ui={listMsg:"Gespeichert."};render()}
+  else if(a==="savelists"){const rd=x=>((document.getElementById(x)||{}).value||"").split("\n").map(s=>s.replace(/\|/g,"/").trim()).filter(Boolean).slice(0,120);
+    db.settings.kliniken=rd("kliniken");db.settings.klinikenMore=rd("klinikenMore");db.settings.leitstellen=rd("leitstellen");db.settings.leitstellenMore=rd("leitstellenMore");save();ui={listMsg:"Gespeichert."};render()}
   else if(a==="cat"){run.cat=run.cat===b.dataset.c?null:b.dataset.c;render()}
   else if(a==="savel"){run.saveLesson=b.checked;const box=document.getElementById("lessonBox");if(box)box.hidden=!b.checked}
   else if(a==="rulesShow"){run.showRules=true;render()}
@@ -598,6 +622,8 @@ app.addEventListener("click",e=>{
   else if(a==="setpin"){const v=((document.getElementById("newpin")||{}).value||"").trim();
     if(/^\d{4,8}$/.test(v)){db.settings.pin=v;save();ui={pinMsg:"PIN geändert."}}else{ui={pinMsg:"Bitte 4 bis 8 Ziffern eingeben."}}render()}
 });
+app.addEventListener("change",e=>{const t=e.target;if(!t.classList||!t.classList.contains("msel")||!run)return;
+  const m=t.dataset.mode,id=t.dataset.id;const d=run.det[m][id]=run.det[m][id]||{place:null,asp:[]};d.place=t.value||null;render()});
 app.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="pin"){e.preventDefault();app.querySelector('[data-a="pinok"]').click()}});
 
 render();
