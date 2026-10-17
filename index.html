@@ -272,7 +272,7 @@ function vHome(){
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
     <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Einsatzart, PIN</span></button>
    </div>
-   <p class="small">Version 0.1 · Alle Daten bleiben auf diesem Gerät.</p>
+   <p class="small">Version 0.1.1 · Alle Daten bleiben auf diesem Gerät.</p>
   </div>`;
 }
 
@@ -310,13 +310,15 @@ function vFlow(){
     body=`<span class="badge neg">Wird als „besser machen“ gezählt</span>`+chipGrid(run.neg,"neg");
   }else if(key==="take"){
     body=`<div class="stack" style="gap:8px">
-      <label for="lesson" class="eyebrow">Für die nächste Besatzung notieren (freiwillig)</label>
+      <label for="lesson" class="eyebrow">Für die nächste Besatzung notieren (freiwillig, auch mehrere)</label>
       <div class="seg" role="group" aria-label="Art des Eintrags">
        <button data-a="ntype" data-t="lehre" aria-pressed="${run.noteType==="lehre"}">Lehre aus dem Einsatz</button>
        <button data-a="ntype" data-t="fzg" aria-pressed="${run.noteType==="fzg"}">Hinweis zum Fahrzeug</button>
       </div>
       <textarea id="lesson" maxlength="140" placeholder="${run.noteType==="fzg"?"z. B. Absaugpumpe lädt nicht, Ersatzgerät im Fach links.":"z. B. Bei unklarer Lage früher Notarzt nachfordern."}">${esc(run.lesson)}</textarea>
-      <div class="small"><span id="cnt">${run.lesson.length}</span>/140 · ${run.noteType==="fzg"?"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“, bis jemand ihn als erledigt löscht, z. B. wenn der Defekt behoben ist.":"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“ und bleibt anonym in der Auswertung der Wache, auch wenn sie dort entfernt wird."} Keine Namen, keine Patientendaten, keine Orte. Leer lassen geht auch.</div>
+      <div class="small"><span id="cnt">${run.lesson.length}</span>/140 · ${run.noteType==="fzg"?"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“, bis jemand ihn als erledigt löscht, z. B. wenn der Defekt behoben ist.":"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“ und bleibt anonym in der Auswertung der Wache, auch wenn sie dort entfernt wird."} Keine Namen, keine Patientendaten, keine Orte.</div>
+      <button class="btn" data-a="addn">+ Eintrag hinzufügen</button>
+      ${run.notes.length?`<ul class="lessons">${run.notes.map((e,i)=>`<li><p><span class="badge ${e.k==="fzg"?"neg":"pos"}">${e.k==="fzg"?"Fahrzeug":"Lehre"}</span><br>${esc(e.t)}</p><button class="x" data-a="deln" data-i="${i}">Entfernen</button></li>`).join("")}</ul>`:""}
      </div>`;
   }else if(key==="cat"){
     body=`<div class="chips">`+CATS.map(c=>`<button class="chip cat" data-a="cat" data-c="${c}" aria-pressed="${run.cat===c}">${c}</button>`).join("")+`</div>`;
@@ -343,7 +345,7 @@ function vDone(){
    <h1>Status 1.</h1>
    <p class="lead">Debrief erledigt. Wieder einsatzbereit.</p>
    <div class="row" style="justify-content:center">
-    <span class="badge pos">${r.p} × lief gut</span><span class="badge neg">${r.n} × besser machen</span>${r.l?`<span class="badge" style="background:var(--surface-2)">1 Hinweis für die nächste Besatzung</span>`:""}
+    <span class="badge pos">${r.p} × lief gut</span><span class="badge neg">${r.n} × besser machen</span>${r.l?`<span class="badge" style="background:var(--surface-2)">${r.l} ${r.l===1?"Eintrag":"Einträge"} für die nächste Besatzung</span>`:""}
    </div>
    <p class="small">Gespeichert wurden nur die Schlagworte, ohne Uhrzeit und ohne Namen.</p>
    <button class="btn primary" data-a="home">Fertig</button>
@@ -464,6 +466,7 @@ function tick(){
 }
 setInterval(tick,500);
 
+function flushNote(){const t=(run.lesson||"").trim().slice(0,140);if(t){run.notes.push({t,k:run.noteType});run.lesson=""}}
 function addNote(t,k){
   db.board=db.board||[];
   db.board.splice(Math.floor(Math.random()*(db.board.length+1)),0,{t,k});
@@ -474,10 +477,11 @@ function finish(){
   run.neg.forEach(id=>{(db.counts[id]=db.counts[id]||{pos:0,neg:0}).neg++});
   db.debriefs++;
   if(run.cat)db.cats[run.cat]=(db.cats[run.cat]||0)+1;
-  const l=run.lesson.trim().slice(0,140);
-  if(l)addNote(l,run.noteType);
+  flushNote();
+  run.notes.forEach(e=>addNote(e.t,e.k));
+  const l=run.notes.length;
   save();
-  const last={p:run.pos.size,n:run.neg.size,l:!!l};
+  const last={p:run.pos.size,n:run.neg.size,l:l};
   run=null;unlockScreen();view="done";ui={last};render();window.scrollTo(0,0);
 }
 
@@ -494,9 +498,9 @@ app.addEventListener("click",e=>{
   const a=b.dataset.a;
   if(a==="home"){run=null;unlockScreen();go("home")}
   else if(a==="go"){go(b.dataset.v)}
-  else if(a==="start"){run={mode:b.dataset.mode,step:0,pos:new Set(),neg:new Set(),lesson:"",noteType:"lehre",cat:null,help:false,showRules:false,t0:Date.now(),dur:b.dataset.mode==="lang"?300:120};lockScreen();go("flow")}
+  else if(a==="start"){run={mode:b.dataset.mode,step:0,pos:new Set(),neg:new Set(),lesson:"",noteType:"lehre",notes:[],cat:null,help:false,showRules:false,t0:Date.now(),dur:b.dataset.mode==="lang"?300:120};lockScreen();go("flow")}
   else if(a==="help"){run.help=true;render()}
-  else if(a==="next"){run.step++;if(run.step>=steps().length)finish();else{render();window.scrollTo(0,0)}}
+  else if(a==="next"){if(steps()[run.step]==="take")flushNote();run.step++;if(run.step>=steps().length)finish();else{render();window.scrollTo(0,0)}}
   else if(a==="back"){run.step=Math.max(0,run.step-1);render();window.scrollTo(0,0)}
   else if(a==="abort"){run=null;unlockScreen();go("home")}
   else if(a==="tag"){const s=b.dataset.mode==="pos"?run.pos:run.neg,id=b.dataset.id;s.has(id)?s.delete(id):s.add(id);b.setAttribute("aria-pressed",s.has(id))}
@@ -515,6 +519,8 @@ app.addEventListener("click",e=>{
   else if(a==="reset"){const s=db.settings,bd=db.board||[];db=blank();db.settings=s;db.board=bd;save();ui={};render()}
   else if(a==="askcat"){db.settings.askCat=b.checked;save()}
   else if(a==="ntype"){run.noteType=b.dataset.t;render()}
+  else if(a==="addn"){flushNote();render()}
+  else if(a==="deln"){run.notes.splice(+b.dataset.i,1);render()}
   else if(a==="wtype"){ui.wtype=b.dataset.t;b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}
   else if(a==="addw"){const v=((document.getElementById("wnote")||{}).value||"").trim().slice(0,140);if(v){addNote(v,ui.wtype==="lehre"?"lehre":"fzg");save();render()}}
   else if(a==="delb"){db.board.splice(+b.dataset.i,1);save();render()}
