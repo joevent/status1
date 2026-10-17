@@ -1,4 +1,4 @@
-# Status 1
+# Status 1 Debrief
 
 **Erst Debrief, dann Status 1.** Anonymes 2-Minuten-Debrief für Rettungsdienst-Besatzungen – auf der Rückfahrt, vorgelesen vom Beifahrer.
 

@@ -1,5 +1,5 @@
 // Status 1 – Offline-Unterstützung. Bei Änderungen an der App VERSION erhöhen.
-const VERSION = "status1-v0.2.2";
+const VERSION = "status1-v0.3.0";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];
 

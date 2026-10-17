@@ -1,6 +1,6 @@
 {
-  "name": "Status 1 – Debrief",
-  "short_name": "Status 1",
+  "name": "Status 1 Debrief",
+  "short_name": "Status 1 Debrief",
   "description": "Anonymes 2-Minuten-Debrief für Rettungsdienst-Besatzungen.",
   "lang": "de",
   "start_url": "./",
