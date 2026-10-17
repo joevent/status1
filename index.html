@@ -110,6 +110,14 @@ h2{font-size:34px}
 .mode-neg .chip[aria-pressed="true"]::before{background:var(--neg);border-color:var(--neg)}
 .chip.cat[aria-pressed="true"]{border-color:var(--fg);background:var(--surface-2)}
 .chip.cat[aria-pressed="true"]::before{background:var(--fg);border-color:var(--fg)}
+.detail{grid-column:1/-1;background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.dlabel{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.minis{display:flex;flex-wrap:wrap;gap:6px}
+.mini{min-height:40px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);padding:6px 12px;font-size:15px}
+.mode-pos .mini[aria-pressed="true"]{background:var(--pos-bg);border-color:var(--pos);font-weight:600}
+.mode-neg .mini[aria-pressed="true"]{background:var(--neg-bg);border-color:var(--neg);font-weight:600}
+.dlines{display:grid;gap:2px;font-size:14px;color:var(--muted)}
+.dlines b{font-weight:600}.dlines b.p{color:var(--pos)}.dlines b.n{color:var(--neg)}
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;border-radius:999px;padding:3px 10px}
 .badge.pos{background:var(--pos-bg);color:var(--pos)}
 .badge.neg{background:var(--neg-bg);color:var(--neg)}
@@ -186,9 +194,21 @@ const TAGS=[
 const TAGNAME={},TAGGROUP={};
 TAGS.forEach(g=>g.items.forEach(([id,n])=>{TAGNAME[id]=n;TAGGROUP[id]=g.g}));
 const CATS=["Internistisch","Trauma","Reanimation","Kind","Transport","Sonstiges"];
+const DET={
+ zna:{places:"kliniken",asp:["Wartezeit","Ansprechpartner","Übergabe-Ablauf","Umgangston","Aufnahmekapazität"]},
+ kla:{places:"kliniken",asp:["Voranmeldung erreicht","Rückfragen","Zuweisung","Umgangston"]},
+ lst:{places:"leitstellen",asp:["Alarmierung","Einsatzinformationen","Rückmeldung","Nachforderung","Funkverkehr"]},
+ nef:{asp:["Absprache","Eintreffen","Übergabe","Zusammenarbeit"]},
+ fwp:{asp:["Absprache","Zugang & Rettung","Einsatzleitung"]},
+ anf:{asp:["Adresse unklar","Navigation","Verkehr","Zufahrt"]},
+ mat:{asp:["Fehlte","Defekt","Ungünstig gelagert"]},
+ dok:{asp:["Zeitaufwand","Software / Tablet","Unklare Vorgaben","Übergabeprotokoll"]},
+ eig:{asp:["Aggression / Gewalt","Verkehr","Infektionsschutz","Absicherung der Einsatzstelle"]}
+};
+const MIN_NEG=3;
 const KEY="status1.v1";
 
-function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],demo:false,settings:{askCat:false,pin:"0000"}}}
+function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{},asp:{},demo:false,settings:{askCat:false,pin:"0000",kliniken:["Klinik A","Klinik B","Klinik C"],leitstellen:["Leitstelle"]}}}
 function load(){
   try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);const b=blank();return Object.assign(b,o,{settings:Object.assign(b.settings,o.settings||{})})}}catch(e){}
   return blank();
@@ -224,9 +244,35 @@ function bar(){
 }
 
 function chipGrid(sel,mode){
+  const det=run.det[mode];
   return `<div class="stack mode-${mode}">`+TAGS.map(g=>`<div class="group"><div class="eyebrow">${g.g}</div><div class="chips">`+
-   g.items.map(([id,n])=>`<button class="chip" data-a="tag" data-id="${id}" data-mode="${mode}" aria-pressed="${sel.has(id)}">${n}</button>`).join("")+
+   g.items.map(([id,n])=>{
+     let h=`<button class="chip" data-a="tag" data-id="${id}" data-mode="${mode}" aria-pressed="${sel.has(id)}">${n}</button>`;
+     const D=DET[id];
+     if(D&&sel.has(id)){
+       const d=det[id]||{place:null,asp:[]};
+       const pl=D.places?(db.settings[D.places]||[]):[];
+       h+=`<div class="detail"><div class="small"><b>${esc(n)}</b> genauer, wenn ihr wollt${D.places?" · nur Einrichtungen, nie Personen":""}</div>`+
+        (pl.length?`<div class="dlabel">Wo?</div><div class="minis">${pl.map(p=>`<button class="mini" data-a="dplace" data-id="${id}" data-mode="${mode}" data-v="${esc(p)}" aria-pressed="${d.place===p}">${esc(p)}</button>`).join("")}</div>`:"")+
+        `<div class="dlabel">Was genau?</div><div class="minis">${D.asp.map(x=>`<button class="mini" data-a="dasp" data-id="${id}" data-mode="${mode}" data-v="${esc(x)}" aria-pressed="${d.asp.includes(x)}">${esc(x)}</button>`).join("")}</div>`+
+        (mode==="neg"&&D.places?`<div class="small">Eine Einrichtung erscheint in der Auswertung erst ab ${MIN_NEG} Nennungen.</div>`:"")+`</div>`;
+     }
+     return h;
+   }).join("")+
    `</div></div>`).join("")+`</div>`;
+}
+function detailHtml(id){
+  const D=DET[id];if(!D)return "";
+  const out=[];
+  ["pos","neg"].forEach(m=>{
+    const pre=m+"|"+id+"|", lab=m==="pos"?"lief gut":"besser machen";
+    const shown=[];let hidden=0;
+    Object.keys(db.place||{}).filter(k=>k.startsWith(pre)).sort((a,b)=>db.place[b]-db.place[a]).forEach(k=>{const c=db.place[k];if(m==="neg"&&c<MIN_NEG)hidden+=c;else shown.push(esc(k.slice(pre.length))+" "+c+"×")});
+    if(shown.length||hidden)out.push(`<div><b class="${m==='pos'?'p':'n'}">${lab}, wo:</b> ${shown.join(" · ")}${hidden?(shown.length?" · ":"")+hidden+"× ohne Ortsangabe (unter "+MIN_NEG+" je Einrichtung)":""}</div>`);
+    const asp=Object.keys(db.asp||{}).filter(k=>k.startsWith(pre)).sort((a,b)=>db.asp[b]-db.asp[a]).map(k=>esc(k.slice(pre.length))+" "+db.asp[k]+"×");
+    if(asp.length)out.push(`<div><b class="${m==='pos'?'p':'n'}">${lab}, was:</b> ${asp.join(" · ")}</div>`);
+  });
+  return out.length?`<div class="dlines">${out.join("")}</div>`:"";
 }
 
 function rulesCard(){
@@ -270,9 +316,9 @@ function vHome(){
     <button class="tile" data-a="go" data-v="wall"><b>Dringender Sprechwunsch</b><span>${(db.board||[]).length} ${(db.board||[]).length===1?"Hinweis":"Hinweise"} für die nächste Besatzung</span></button>
     <button class="tile" data-a="go" data-v="rules"><b>Feedback-Regeln</b><span>Geben &amp; nehmen</span></button>
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
-    <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Einsatzart, PIN</span></button>
+    <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Kliniken, PIN, Einsatzart</span></button>
    </div>
-   <p class="small">Version 0.1.1 · Alle Daten bleiben auf diesem Gerät.</p>
+   <p class="small">Version 0.2 · Alle Daten bleiben auf diesem Gerät.</p>
   </div>`;
 }
 
@@ -389,6 +435,11 @@ function csv(){
   let s="Schlagwort;Bereich;lief gut;besser machen\n";
   TAGS.forEach(g=>g.items.forEach(([id,n])=>{const c=db.counts[id]||{pos:0,neg:0};s+=`${n};${g.g};${c.pos};${c.neg}\n`}));
   s+=`\nDebriefs gesamt;${db.debriefs}\n`;
+  const dl=[];
+  Object.keys(DET).forEach(id=>["pos","neg"].forEach(m=>{const pre=m+"|"+id+"|",lab=m==="pos"?"lief gut":"besser machen";
+    Object.keys(db.place||{}).filter(k=>k.startsWith(pre)).forEach(k=>{const c=db.place[k];if(m==="neg"&&c<MIN_NEG)return;dl.push(`${TAGNAME[id]};Ort: ${k.slice(pre.length)};${lab};${c}`)});
+    Object.keys(db.asp||{}).filter(k=>k.startsWith(pre)).forEach(k=>dl.push(`${TAGNAME[id]};${k.slice(pre.length)};${lab};${db.asp[k]}`))}));
+  if(dl.length)s+="\nDetails;Angabe;Bewertung;Anzahl\n"+dl.join("\n")+"\n";
   const cats=Object.keys(db.cats);if(cats.length){s+="\nEinsatzart;Anzahl\n";cats.forEach(c=>s+=`${c};${db.cats[c]}\n`)}
   if(db.lessons.length){s+="\nLehren\n";db.lessons.forEach(l=>s+=`"${l.replace(/"/g,'""')}"\n`)}
   return s;
@@ -418,9 +469,10 @@ function vStats(){
     <button data-a="sort" data-s="cat" aria-pressed="${sortMode==="cat"}">Nach Bereich</button>
    </div>
    <div class="legend"><span><i style="background:var(--pos)"></i>lief gut</span><span><i style="background:var(--neg)"></i>besser machen</span></div>
+   <p class="small" style="margin:0">Bei „besser machen“ erscheint eine Einrichtung erst ab ${MIN_NEG} Nennungen. So werden Häufungen sichtbar, keine Einzelfälle.</p>
    <div class="bars">${rows.map(r=>`<div class="barrow ${r.p+r.m?"":"zero"}">
      <div class="lbl"><b style="font-weight:500">${r.n} <span class="small">· ${r.g}</span></b><span><span class="p">${r.p}</span> / <span class="n">${r.m}</span></span></div>
-     <div class="track" aria-hidden="true"><i class="p" style="width:${r.p/max*100}%"></i><i class="n" style="width:${r.m/max*100}%"></i></div>
+     <div class="track" aria-hidden="true"><i class="p" style="width:${r.p/max*100}%"></i><i class="n" style="width:${r.m/max*100}%"></i></div>${detailHtml(r.id)}
     </div>`).join("")}</div>
    ${cats.length?`<div class="card"><h3>Einsatzart (freiwillig erfasst)</h3><ul>${cats.map(c=>`<li>${esc(c)}: ${db.cats[c]}</li>`).join("")}</ul></div>`:""}
    <div class="card"><h3>Lehren</h3>${db.lessons.length?`<ul class="lessons">${db.lessons.map((t,i)=>`<li><p>${esc(t)}</p><button class="x" data-a="dell" data-i="${i}">Löschen</button></li>`).join("")}</ul>`:`<p class="small" style="margin:0">Noch keine gespeichert.</p>`}</div>
@@ -439,6 +491,15 @@ function vSettings(){
    <div class="card stack" style="gap:10px">
     <label class="check"><input type="checkbox" id="askCat" data-a="askcat" ${db.settings.askCat?"checked":""}> Einsatzart abfragen (freiwillig, überspringbar)</label>
     <p class="small" style="margin:0">Standardmäßig aus. Auf kleinen Wachen kann die Einsatzart einen Einsatz erkennbar machen.</p>
+   </div>
+   <div class="card stack" style="gap:10px"><h3>Einrichtungen für Ortsangaben</h3>
+    <p class="small" style="margin:0">Eine pro Zeile. Nur Einrichtungen, keine Personen.</p>
+    <label class="small" for="kliniken">Kliniken / Notaufnahmen</label>
+    <textarea id="kliniken" rows="4">${esc((db.settings.kliniken||[]).join("\n"))}</textarea>
+    <label class="small" for="leitstellen">Leitstellen</label>
+    <textarea id="leitstellen" rows="2">${esc((db.settings.leitstellen||[]).join("\n"))}</textarea>
+    ${ui.listMsg?`<div class="small">${ui.listMsg}</div>`:""}
+    <button class="btn" data-a="savelists">Listen speichern</button>
    </div>
    <div class="card stack" style="gap:10px"><h3>PIN für die Auswertung</h3>
     <input type="password" id="newpin" inputmode="numeric" maxlength="8" placeholder="Neue PIN" autocomplete="off" aria-label="Neue PIN">
@@ -476,6 +537,10 @@ function finish(){
   run.pos.forEach(id=>{(db.counts[id]=db.counts[id]||{pos:0,neg:0}).pos++});
   run.neg.forEach(id=>{(db.counts[id]=db.counts[id]||{pos:0,neg:0}).neg++});
   db.debriefs++;
+  db.place=db.place||{};db.asp=db.asp||{};
+  ["pos","neg"].forEach(m=>{(m==="pos"?run.pos:run.neg).forEach(id=>{const d=run.det[m][id];if(!d)return;
+    if(d.place){const k=m+"|"+id+"|"+d.place;db.place[k]=(db.place[k]||0)+1}
+    d.asp.forEach(x=>{const k=m+"|"+id+"|"+x;db.asp[k]=(db.asp[k]||0)+1})})});
   if(run.cat)db.cats[run.cat]=(db.cats[run.cat]||0)+1;
   flushNote();
   run.notes.forEach(e=>addNote(e.t,e.k));
@@ -489,6 +554,8 @@ function loadDemo(){
   const d={kom:[14,6],fue:[11,4],spk:[2,3],anf:[8,5],lag:[10,2],mat:[6,7],med:[4,1],zei:[3,6],dok:[2,11],lst:[9,8],nef:[11,3],fwp:[6,2],kla:[3,9],zna:[5,12],rmt:[4,2],mue:[0,7],str:[1,4],eig:[3,1]};
   Object.keys(d).forEach(k=>db.counts[k]={pos:d[k][0],neg:d[k][1]});
   db.debriefs=31;db.demo=true;
+  db.place={"neg|zna|Klinik B":7,"pos|zna|Klinik A":9,"neg|zna|Klinik A":1,"neg|zna|Klinik C":2,"pos|zna|Klinik C":3,"neg|lst|Leitstelle":5,"pos|lst|Leitstelle":6};
+  db.asp={"neg|zna|Wartezeit":6,"neg|zna|Ansprechpartner":4,"pos|zna|Übergabe-Ablauf":8,"neg|lst|Rückmeldung":5,"pos|lst|Alarmierung":6,"neg|eig|Aggression / Gewalt":3,"neg|dok|Software / Tablet":7};
   db.lessons=["Voranmeldung in der ZNA mit Ankunftszeit und Kernproblem in einem Satz.","Bei unklarer Lage früher Notarzt nachfordern.","Rucksack nach jedem Einsatz sofort auffüllen, nicht erst an der Wache.","Übergabe nach Schema, auch wenn es hektisch ist."];
   save();render();
 }
@@ -498,12 +565,16 @@ app.addEventListener("click",e=>{
   const a=b.dataset.a;
   if(a==="home"){run=null;unlockScreen();go("home")}
   else if(a==="go"){go(b.dataset.v)}
-  else if(a==="start"){run={mode:b.dataset.mode,step:0,pos:new Set(),neg:new Set(),lesson:"",noteType:"lehre",notes:[],cat:null,help:false,showRules:false,t0:Date.now(),dur:b.dataset.mode==="lang"?300:120};lockScreen();go("flow")}
+  else if(a==="start"){run={mode:b.dataset.mode,step:0,pos:new Set(),neg:new Set(),lesson:"",noteType:"lehre",notes:[],det:{pos:{},neg:{}},cat:null,help:false,showRules:false,t0:Date.now(),dur:b.dataset.mode==="lang"?300:120};lockScreen();go("flow")}
   else if(a==="help"){run.help=true;render()}
   else if(a==="next"){if(steps()[run.step]==="take")flushNote();run.step++;if(run.step>=steps().length)finish();else{render();window.scrollTo(0,0)}}
   else if(a==="back"){run.step=Math.max(0,run.step-1);render();window.scrollTo(0,0)}
   else if(a==="abort"){run=null;unlockScreen();go("home")}
-  else if(a==="tag"){const s=b.dataset.mode==="pos"?run.pos:run.neg,id=b.dataset.id;s.has(id)?s.delete(id):s.add(id);b.setAttribute("aria-pressed",s.has(id))}
+  else if(a==="tag"){const m=b.dataset.mode,s=m==="pos"?run.pos:run.neg,id=b.dataset.id;if(s.has(id)){s.delete(id);delete run.det[m][id]}else s.add(id);if(DET[id])render();else b.setAttribute("aria-pressed",s.has(id))}
+  else if(a==="dplace"||a==="dasp"){const m=b.dataset.mode,id=b.dataset.id,v=b.dataset.v;const d=run.det[m][id]=run.det[m][id]||{place:null,asp:[]};
+    if(a==="dplace")d.place=d.place===v?null:v;else{const i=d.asp.indexOf(v);i<0?d.asp.push(v):d.asp.splice(i,1)}render()}
+  else if(a==="savelists"){const rd=x=>((document.getElementById(x)||{}).value||"").split("\n").map(s=>s.replace(/\|/g,"/").trim()).filter(Boolean).slice(0,20);
+    db.settings.kliniken=rd("kliniken");db.settings.leitstellen=rd("leitstellen");save();ui={listMsg:"Gespeichert."};render()}
   else if(a==="cat"){run.cat=run.cat===b.dataset.c?null:b.dataset.c;render()}
   else if(a==="savel"){run.saveLesson=b.checked;const box=document.getElementById("lessonBox");if(box)box.hidden=!b.checked}
   else if(a==="rulesShow"){run.showRules=true;render()}
