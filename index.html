@@ -12,7 +12,171 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Status 1">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+/* Layout: single-column phone tool read aloud in the vehicle; sticky bar with timer, FMS-key motif, big tap targets */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --surface-2:#e2e7ec; --fg:#14202b; --muted:#56636f; --line:#cbd3db;
+  --accent:#d4441b; --accent-fg:#ffffff;
+  --pos:#1d8552; --pos-bg:#dcf1e5; --neg:#a96200; --neg-bg:#fbe8c6;
+  --key:#1b2631; --key-fg:#f3f6f9; --key-edge:#0b1117;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e141a; --surface:#16202a; --surface-2:#1f2a36; --fg:#e6ecf1; --muted:#93a2b0; --line:#2b3846;
+    --accent:#ff6c3e; --accent-fg:#1b0c06;
+    --pos:#4fca8c; --pos-bg:#14342a; --neg:#f1ad4b; --neg-bg:#3a2a12;
+    --key:#e6ecf1; --key-fg:#0e141a; --key-edge:#9aa8b5;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --surface:#16202a; --surface-2:#1f2a36; --fg:#e6ecf1; --muted:#93a2b0; --line:#2b3846;
+  --accent:#ff6c3e; --accent-fg:#1b0c06;
+  --pos:#4fca8c; --pos-bg:#14342a; --neg:#f1ad4b; --neg-bg:#3a2a12;
+  --key:#e6ecf1; --key-fg:#0e141a; --key-edge:#9aa8b5;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* app bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0}
+.brand b{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em}
+.key{display:inline-grid;place-items:center;background:var(--key);color:var(--key-fg);font-family:var(--display);font-weight:700;border-radius:8px;box-shadow:inset 0 -3px 0 var(--key-edge)}
+.key.s{width:32px;height:32px;font-size:22px}
+.timer{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:.02em;min-width:5ch;text-align:right}
+.timer.over{color:var(--neg)}
+.progress{height:4px;background:var(--surface-2);border-radius:2px;overflow:hidden;margin:-12px 0 20px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .25s linear}
+
+/* type */
+h1,h2{font-family:var(--display);font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:44px;letter-spacing:.01em}
+h2{font-size:34px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lead{font-size:19px;color:var(--muted);margin:0}
+.hint{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:16px;color:var(--muted)}
+.hint strong{color:var(--fg)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.small{font-size:14px;color:var(--muted)}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:58px;padding:12px 18px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:18px;width:100%;text-align:center}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-family:var(--display);font-size:24px;letter-spacing:.02em}
+.btn.ghost{background:transparent}
+.btn.warn{border-color:var(--neg);color:var(--neg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn small{font-family:var(--body);font-weight:500;font-size:15px;opacity:.85}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.linkrow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:76px}
+.tile b{font-size:17px}
+.tile span{font-size:14px;color:var(--muted)}
+
+/* hero */
+.hero{display:flex;gap:18px;align-items:center;margin-block:8px 6px}
+.key.xl{width:96px;height:96px;font-size:74px;border-radius:18px;box-shadow:inset 0 -7px 0 var(--key-edge);flex:none}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.fact{font-size:14px;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted)}
+
+/* question */
+.q{font-family:var(--display);font-weight:700;font-size:38px;line-height:1.05;text-wrap:balance}
+.readaloud{display:flex;gap:8px;align-items:center}
+.tag-read{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;background:var(--surface-2);border-radius:6px;padding:3px 8px;color:var(--muted)}
+
+/* chips */
+.group{display:flex;flex-direction:column;gap:8px}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.chip{min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:8px 12px;text-align:left;font-weight:500;font-size:16px;line-height:1.2;display:flex;align-items:center;gap:8px}
+.chip::before{content:"";width:16px;height:16px;flex:none;border-radius:4px;border:1.5px solid var(--line)}
+.mode-pos .chip[aria-pressed="true"]{background:var(--pos-bg);border-color:var(--pos)}
+.mode-pos .chip[aria-pressed="true"]::before{background:var(--pos);border-color:var(--pos)}
+.mode-neg .chip[aria-pressed="true"]{background:var(--neg-bg);border-color:var(--neg)}
+.mode-neg .chip[aria-pressed="true"]::before{background:var(--neg);border-color:var(--neg)}
+.chip.cat[aria-pressed="true"]{border-color:var(--fg);background:var(--surface-2)}
+.chip.cat[aria-pressed="true"]::before{background:var(--fg);border-color:var(--fg)}
+.detail{grid-column:1/-1;background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.dlabel{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.minis{display:flex;flex-wrap:wrap;gap:6px}
+.msel{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 10px;font-size:15px;max-width:100%}
+.mode-pos .msel.on{border-color:var(--pos);background:var(--pos-bg);font-weight:600}
+.mode-neg .msel.on{border-color:var(--neg);background:var(--neg-bg);font-weight:600}
+.mini{min-height:40px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);padding:6px 12px;font-size:15px}
+.mode-pos .mini[aria-pressed="true"]{background:var(--pos-bg);border-color:var(--pos);font-weight:600}
+.mode-neg .mini[aria-pressed="true"]{background:var(--neg-bg);border-color:var(--neg);font-weight:600}
+.dlines{display:grid;gap:2px;font-size:14px;color:var(--muted)}
+.dlines b{font-weight:600}.dlines b.p{color:var(--pos)}.dlines b.n{color:var(--neg)}
+.wm{display:inline-flex;align-items:baseline;gap:.3em}
+.wm small{font-family:var(--body);font-weight:600;font-size:max(11px,.36em);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;border-radius:999px;padding:3px 10px}
+.badge.pos{background:var(--pos-bg);color:var(--pos)}
+.badge.neg{background:var(--neg-bg);color:var(--neg)}
+
+textarea{width:100%;min-height:96px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:17px;resize:vertical}
+input[type=password],input[type=text]{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:22px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
+label.check{display:flex;gap:10px;align-items:center;font-size:16px}
+label.check input{width:22px;height:22px;accent-color:var(--accent)}
+
+/* rules card */
+.rules{display:grid;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{font-family:var(--display);font-size:24px;margin:0 0 8px}
+.card ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.www{display:grid;gap:8px;margin:10px 0}
+.www div{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:start}
+.www b{font-family:var(--display);font-size:26px;line-height:1;color:var(--accent)}
+.www em{font-style:normal;color:var(--muted);display:block;font-size:15px}
+
+/* stats */
+.stat-head{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.num{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.num b{display:block;font-family:var(--display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.num span{font-size:13px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:var(--surface);font-size:15px;font-weight:600;padding:6px}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.bars{display:grid;gap:12px}
+.barrow{display:grid;gap:4px}
+.barrow .lbl{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.barrow .lbl span{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.barrow .lbl span .p{color:var(--pos);font-weight:600}
+.barrow .lbl span .n{color:var(--neg);font-weight:600}
+.track{height:12px;background:var(--surface-2);border-radius:6px;display:flex;overflow:hidden}
+.track .p{background:var(--pos)}
+.track .n{background:var(--neg)}
+.zero{opacity:.5}
+.legend{display:flex;gap:14px;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.lessons{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.lessons li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.lessons li p{margin:0;min-width:0;overflow-wrap:anywhere}
+.x{border:0;background:none;color:var(--muted);font-size:14px;text-decoration:underline;flex:none}
+.s0{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface));border-radius:12px;padding:12px 14px}
+.s0 b{font-size:17px}
+.s0 small{color:var(--muted);font-size:14px}
+.key.s0k{width:40px;height:40px;font-size:28px;background:var(--accent);color:var(--accent-fg);box-shadow:none;flex:none}
+.demo{background:var(--neg-bg);color:var(--neg);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600}
+.err{color:var(--accent);font-size:15px;font-weight:600}
+
+/* done */
+.done{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding-top:24px}
+.key.glow{width:140px;height:140px;font-size:108px;border-radius:24px;box-shadow:inset 0 -9px 0 var(--key-edge),0 0 0 8px color-mix(in srgb,var(--pos) 25%,transparent)}
+@media (prefers-reduced-motion:no-preference){
+  .key.glow{animation:pop .5s ease-out}
+  @keyframes pop{from{transform:scale(.85);opacity:.4}to{transform:scale(1);opacity:1}}
+}
+@media (max-width:380px){h1{font-size:38px}.q{font-size:32px}.key.xl{width:80px;height:80px;font-size:60px}}
+</style>
 <title>Status 1 Debrief</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -245,7 +409,7 @@ const PROMPTS={
  checkin:{q:"Ist für alle alles okay?",kurz:"Kurz in die Runde fragen. Eine ehrliche Antwort reicht, niemand muss etwas begründen.",lang:"Ruhig einen Moment Pause lassen. Wer nicht reden möchte, muss nicht."},
  pos:{q:"Was lief gut?",kurz:"Jeder nennt einen Punkt. Tippt an, wozu er gehört.",lang:"Was genau hat gut funktioniert, und warum? Wer hat was beigetragen? Was davon wollen wir beibehalten?"},
  neg:{q:"Was machen wir nächstes Mal besser?",kurz:"Es geht um Abläufe, nicht um Schuld. „Ich“-Sätze statt „du hast“.",lang:"Wo wurde es eng? Was hätte geholfen? Lag es an uns oder an einer Schnittstelle? Was war überraschend?"},
- take:{q:"Was nehmen wir mit?",kurz:"Ein Satz, den ihr beim nächsten Einsatz anders oder genauso macht. Ist am Fahrzeug etwas defekt oder fehlt etwas? Dann als Hinweis für die nächste Besatzung notieren.",lang:"Einigt euch auf einen Punkt. Lieber eine konkrete Sache als drei allgemeine. Defekte oder fehlendes Material als Hinweis zum Fahrzeug notieren."},
+ take:{q:"Was nehmen wir mit?",kurz:"Ein Satz, den ihr beim nächsten Einsatz anders oder genauso macht.",lang:"Einigt euch auf einen Punkt. Lieber eine konkrete Sache als drei allgemeine."},
  cat:{q:"Welche Einsatzart?",kurz:"Freiwillig. Hilft der Wache bei der Auswertung. Ihr könnt diesen Schritt überspringen.",lang:"Freiwillig. Hilft der Wache bei der Auswertung. Ihr könnt diesen Schritt überspringen."},
  feedback:{q:"Noch eine Minute für Feedback?",kurz:"Optional. Jeder sagt dem anderen einen Punkt, nach den Regeln unten.",lang:"Jeder gibt dem anderen ein Feedback: zuerst etwas Gutes, dann ein Wunsch."}
 };
@@ -340,7 +504,7 @@ function vHome(){
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
     <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Kliniken, PIN, Einsatzart</span></button>
    </div>
-   <p class="small">Version 0.3 · Alle Daten bleiben auf diesem Gerät.</p>
+   <p class="small">Prototyp v0.1 · Daten bleiben im Browser dieses Geräts.</p>
   </div>`;
 }
 
@@ -378,15 +542,11 @@ function vFlow(){
     body=`<span class="badge neg">Wird als „besser machen“ gezählt</span>`+chipGrid(run.neg,"neg");
   }else if(key==="take"){
     body=`<div class="stack" style="gap:8px">
-      <label for="lesson" class="eyebrow">Für die nächste Besatzung notieren (freiwillig, auch mehrere)</label>
-      <div class="seg" role="group" aria-label="Art des Eintrags">
-       <button data-a="ntype" data-t="lehre" aria-pressed="${run.noteType==="lehre"}">Lehre aus dem Einsatz</button>
-       <button data-a="ntype" data-t="fzg" aria-pressed="${run.noteType==="fzg"}">Hinweis zum Fahrzeug</button>
-      </div>
-      <textarea id="lesson" maxlength="140" placeholder="${run.noteType==="fzg"?"z. B. Absaugpumpe lädt nicht, Ersatzgerät im Fach links.":"z. B. Bei unklarer Lage früher Notarzt nachfordern."}">${esc(run.lesson)}</textarea>
-      <div class="small"><span id="cnt">${run.lesson.length}</span>/140 · ${run.noteType==="fzg"?"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“, bis jemand ihn als erledigt löscht, z. B. wenn der Defekt behoben ist.":"Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“ und bleibt anonym in der Auswertung der Wache, auch wenn sie dort entfernt wird."} Keine Namen, keine Patientendaten, keine Orte.</div>
-      <button class="btn" data-a="addn">+ Eintrag hinzufügen</button>
-      ${run.notes.length?`<ul class="lessons">${run.notes.map((e,i)=>`<li><p><span class="badge ${e.k==="fzg"?"neg":"pos"}">${e.k==="fzg"?"Fahrzeug":"Lehre"}</span><br>${esc(e.t)}</p><button class="x" data-a="deln" data-i="${i}">Entfernen</button></li>`).join("")}</ul>`:""}
+      <label for="lesson" class="eyebrow">Lehre aus dem Einsatz notieren (freiwillig, auch mehrere)</label>
+      <textarea id="lesson" maxlength="140" placeholder="z. B. Bei unklarer Lage früher Notarzt nachfordern.">${esc(run.lesson)}</textarea>
+      <div class="small"><span id="cnt">${run.lesson.length}</span>/140 · Steht für die nächsten Besatzungen unter „Dringender Sprechwunsch“ und bleibt anonym in der Auswertung der Wache, auch wenn sie dort entfernt wird. Keine Namen, keine Patientendaten, keine Orte.</div>
+      <button class="btn" data-a="addn">+ Weitere Lehre</button>
+      ${run.notes.length?`<ul class="lessons">${run.notes.map((e,i)=>`<li><p>${esc(e.t)}</p><button class="x" data-a="deln" data-i="${i}">Entfernen</button></li>`).join("")}</ul>`:""}
      </div>`;
   }else if(key==="cat"){
     body=`<div class="chips">`+CATS.map(c=>`<button class="chip cat" data-a="cat" data-c="${c}" aria-pressed="${run.cat===c}">${c}</button>`).join("")+`</div>`;
@@ -422,12 +582,14 @@ function vDone(){
 
 function vWall(){
   const B=db.board||[];
-  const item=(e,i)=>`<li><p><span class="badge ${e.k==="fzg"?"neg":"pos"}">${e.k==="fzg"?"Fahrzeug":"Lehre"}</span><br>${esc(e.t)}</p><button class="x" data-a="delb" data-i="${i}">${e.k==="fzg"?"Erledigt":"Entfernen"}</button></li>`;
+  const item=([e,i])=>`<li><p>${esc(e.t)}</p><button class="x" data-a="delb" data-i="${i}">${e.k==="fzg"?"Erledigt":"Entfernen"}</button></li>`;
+  const idx=B.map((e,i)=>[e,i]), L=idx.filter(x=>x[0].k!=="fzg"), F=idx.filter(x=>x[0].k==="fzg");
+  const group=(title,sub,arr)=>arr.length?`<div class="card stack" style="gap:8px"><h3>${title}</h3><p class="small" style="margin:0">${sub}</p><ul class="lessons">${arr.map(item).join("")}</ul></div>`:"";
   return `<div class="stack">
    <div class="readaloud"><span class="key s" style="background:var(--accent);color:var(--accent-fg);box-shadow:none">!</span><span class="eyebrow">Für die nächste Besatzung</span></div>
    <h2>Dringender Sprechwunsch</h2>
    <p class="lead">Was frühere Besatzungen auf diesem Fahrzeug weitergeben: Lehren aus Einsätzen und Hinweise zum Fahrzeug, ohne Datum und ohne Namen. Entfernte Lehren bleiben anonym in der Auswertung der Wache.</p>
-   ${B.length?`<ul class="lessons">${B.map(item).join("")}</ul>`:`<div class="hint">Gerade keine Hinweise. Neue Einträge kommen aus dem Debrief oder direkt von hier.</div>`}
+   ${B.length?group("Lehren aus Einsätzen","Aus Debriefs früherer Besatzungen.",L)+group("Zum Fahrzeug","Defekte, fehlendes Material, Besonderheiten. Bitte als erledigt markieren, wenn behoben.",F):`<div class="hint">Gerade keine Hinweise. Lehren kommen aus dem Debrief, Hinweise zum Fahrzeug direkt von hier.</div>`}
    <div class="card stack" style="gap:8px"><h3>Hinweis hinzufügen</h3>
     <div class="seg" role="group" aria-label="Art des Eintrags">
      <button data-a="wtype" data-t="fzg" aria-pressed="${ui.wtype!=="lehre"}">Hinweis zum Fahrzeug</button>
@@ -554,7 +716,7 @@ function tick(){
 }
 setInterval(tick,500);
 
-function flushNote(){const t=(run.lesson||"").trim().slice(0,140);if(t){run.notes.push({t,k:run.noteType});run.lesson=""}}
+function flushNote(){const t=(run.lesson||"").trim().slice(0,140);if(t){run.notes.push({t,k:"lehre"});run.lesson=""}}
 function addNote(t,k){
   db.board=db.board||[];
   db.board.splice(Math.floor(Math.random()*(db.board.length+1)),0,{t,k});
