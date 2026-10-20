@@ -1,7 +1,9 @@
 // Status 1 – Offline-Unterstützung. Bei Änderungen an der App VERSION erhöhen.
-const VERSION = "status1-v0.3.1";
+const VERSION = "status1-v0.3.2";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
-  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];
+  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png",
+  "./fonts/barlow-condensed-500.woff", "./fonts/barlow-condensed-600.woff", "./fonts/barlow-condensed-700.woff",
+  "./fonts/barlow-400.woff", "./fonts/barlow-500.woff", "./fonts/barlow-600.woff"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -14,11 +16,6 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Schriften von Google Fonts: einmal laden, dann aus dem Cache
-  if (url.hostname.endsWith("fonts.googleapis.com") || url.hostname.endsWith("fonts.gstatic.com")) {
-    e.respondWith(caches.open(VERSION).then(c => c.match(req).then(hit => hit || fetch(req).then(res => { c.put(req, res.clone()); return res; }).catch(() => hit))));
-    return;
-  }
   if (url.origin !== location.origin) return;
   // Seite: zuerst Netz (für Updates), sonst Cache (offline)
   if (req.mode === "navigate") {
