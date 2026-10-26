@@ -1,9 +1,10 @@
 // Status 1 – Offline-Unterstützung. Bei Änderungen an der App VERSION erhöhen.
-const VERSION = "status1-v0.3.2";
+const VERSION = "status1-v0.4.0";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png",
   "./fonts/barlow-condensed-500.woff", "./fonts/barlow-condensed-600.woff", "./fonts/barlow-condensed-700.woff",
-  "./fonts/barlow-400.woff", "./fonts/barlow-500.woff", "./fonts/barlow-600.woff"];
+  "./fonts/barlow-400.woff", "./fonts/barlow-500.woff", "./fonts/barlow-600.woff",
+  "./lib/qrcode.js", "./lib/jsQR.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
