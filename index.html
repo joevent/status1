@@ -125,7 +125,7 @@ h2{font-size:34px}
 
 textarea{width:100%;min-height:96px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:17px;resize:vertical}
 input[type=password],input[type=text]{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:22px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
-input#station,input#su_station,input#wipe{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
+input#station,input#su_station,input#wipe,input#shifts{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
 input[type=password]::placeholder{letter-spacing:normal;font-size:17px}
 label.check{display:flex;gap:10px;align-items:center;font-size:16px}
 label.check input{width:22px;height:22px;accent-color:var(--accent)}
@@ -462,7 +462,7 @@ function rulesCard(){
 
 function vHome(){
   return `<div class="stack">
-   ${(()=>{const f=(db.board||[]).filter(e=>e.k==="fzg").length;return f?`<button class="s0" data-a="go" data-v="wall"><span class="key s0k">!</span><span><b>Dringender Sprechwunsch: ${f===1?"1 Hinweis":f+" Hinweise"} zum Fahrzeug</b><br><small>Vor dem nächsten Einsatz kurz lesen</small></span></button>`:""})()}
+   ${(()=>{const f=unseenFzg().length;return f?`<button class="s0" data-a="go" data-v="wall"><span class="key s0k">!</span><span><b>Dringender Sprechwunsch: ${f===1?"1 Hinweis":f+" Hinweise"} zum Fahrzeug</b><br><small>Vor dem nächsten Einsatz kurz lesen</small></span></button>`:""})()}
    <div class="hero"><span class="key xl" aria-hidden="true">1</span>
     <div class="stack" style="gap:6px"><h1>Erst Debrief, dann Status 1.</h1></div></div>
    <p class="lead">Zwei Minuten auf der Rückfahrt. Wer nicht fährt, liest vor. Die App gibt die Fragen und die Zeit vor.</p>
@@ -562,6 +562,7 @@ function vWall(){
   return `<div class="stack">
    <div class="readaloud"><span class="key s" style="background:var(--accent);color:var(--accent-fg);box-shadow:none">!</span><span class="eyebrow">Für die nächste Besatzung</span></div>
    <h2>Dringender Sprechwunsch</h2>
+   ${(db.board||[]).some(e=>e.k==="fzg")?`<p class="small" style="margin:0">Als gelesen markiert für diese Schicht. Auf der Startseite erscheinen die Hinweise zum Fahrzeug erst nach dem nächsten Schichtwechsel wieder, neue Hinweise sofort.</p>`:""}
    <p class="lead">Was frühere Besatzungen auf diesem Fahrzeug weitergeben: Lehren aus Einsätzen und Hinweise zum Fahrzeug, ohne Datum und ohne Namen. Entfernte Lehren bleiben anonym in der Auswertung der Wache.</p>
    ${B.length?group("Lehren aus Einsätzen","Aus Debriefs früherer Besatzungen.",L)+group("Zum Fahrzeug","Defekte, fehlendes Material, Besonderheiten. Bitte als erledigt markieren, wenn behoben.",F):`<div class="hint">Gerade keine Hinweise. Lehren kommen aus dem Debrief, Hinweise zum Fahrzeug direkt von hier.</div>`}
    <div class="card stack" style="gap:8px"><h3>Hinweis hinzufügen</h3>
@@ -652,6 +653,12 @@ function vSettings(){
     <label class="check"><input type="checkbox" id="askCat" data-a="askcat" ${db.settings.askCat?"checked":""}> Einsatzart abfragen (freiwillig, überspringbar)</label>
     <p class="small" style="margin:0">Standardmäßig aus. Auf kleinen Wachen kann die Einsatzart einen Einsatz erkennbar machen.</p>
    </div>
+   <div class="card stack" style="gap:10px"><h3>Schichtwechsel</h3>
+    <p class="small" style="margin:0">Uhrzeiten, zu denen die Schicht wechselt, durch Komma getrennt, zum Beispiel „07:00, 18:00“. Gelesene Hinweise zum Fahrzeug erscheinen dann erst in der nächsten Schicht wieder oben auf der Startseite.</p>
+    <input id="shifts" maxlength="60" value="${esc(db.settings.shifts||"07:00, 18:00")}" aria-label="Schichtwechsel-Uhrzeiten">
+    ${ui.shMsg?`<div class="${ui.shOk?"okmsg":"errmsg"}">${ui.shMsg}</div>`:""}
+    <button class="btn" data-a="saveshifts">Speichern</button>
+   </div>
    <div class="card stack" style="gap:10px"><h3>Name der Wache</h3>
     <p class="small" style="margin:0">Erscheint nur im Bericht, zum Beispiel „Rettungswache Hachenburg“.</p>
     <input id="station" maxlength="60" value="${esc(db.settings.station||"")}" placeholder="Rettungswache …" aria-label="Name der Wache">
@@ -694,7 +701,14 @@ function render(){
   if(view==="report")fitReport();
   if(view==="share")fillShare();
 }
-function go(v){view=v;ui={...(v==="stats"?{}:{})};render();window.scrollTo(0,0)}
+function go(v){view=v;ui={...(v==="stats"?{}:{})};if(v==="wall")markSeen();render();window.scrollTo(0,0)}
+// Schichtwechsel: gelesene Fahrzeug-Hinweise erst in der nächsten Schicht wieder oben anzeigen
+function shiftTimes(){const t=(db.settings.shifts||"07:00, 18:00").split(/[,;\s]+/).map(x=>/^(\d{1,2}):(\d{2})$/.exec(x)).filter(Boolean).map(m=>(+m[1])*60+(+m[2])).filter(x=>x>=0&&x<1440).sort((a,b)=>a-b);return t.length?t:[420,1080]}
+function curShift(){const T=shiftTimes(),n=new Date(),m=n.getHours()*60+n.getMinutes();let d=new Date(n),st=null;
+  for(const x of T)if(x<=m)st=x;if(st===null){d.setDate(d.getDate()-1);st=T[T.length-1]}
+  return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+"T"+st}
+function unseenFzg(){const F=(db.board||[]).filter(e=>e.k==="fzg"),sn=db.seen&&db.seen.shift===curShift()?db.seen.t:[];return F.filter(e=>!sn.includes(e.t))}
+function markSeen(){db.seen={shift:curShift(),t:(db.board||[]).filter(e=>e.k==="fzg").map(e=>e.t)};save()}
 
 function tick(){
   if(view!=="flow"||!run)return;
@@ -769,6 +783,9 @@ app.addEventListener("click",e=>{
     else{db.settings.station=st.slice(0,60);db.settings.pin=p1;db.settings.setupDone=true;save();unlocked=false;view="home";ui={}}
     render();window.scrollTo(0,0)}
   else if(a==="forgot"){ui.forgot=true;render()}
+  else if(a==="saveshifts"){const v=((document.getElementById("shifts")||{}).value||"").trim(),parts=v.split(/[,;\s]+/).filter(Boolean);
+    const ok=parts.length>0&&parts.every(x=>{const m=/^(\d{1,2}):(\d{2})$/.exec(x);return m&&+m[1]<24&&+m[2]<60});
+    if(ok){db.settings.shifts=parts.map(x=>x.padStart(5,"0")).join(", ");save();ui={shMsg:"Gespeichert.",shOk:true}}else{ui={shMsg:"Bitte Uhrzeiten im Format 07:00 eingeben, durch Komma getrennt."}}render()}
   else if(a==="wipe"){const v=((document.getElementById("wipe")||{}).value||"").trim().toUpperCase();
     if(v!=="LÖSCHEN"&&v!=="LOESCHEN"){ui.wipeErr=true;render();return}
     try{localStorage.removeItem(KEY)}catch(err){}db=blank();save();unlocked=false;view="setup";ui={};render();window.scrollTo(0,0)}
@@ -1067,7 +1084,7 @@ app.addEventListener("click",e=>{
   else if(a==="addn"){flushNote();render()}
   else if(a==="deln"){run.notes.splice(+b.dataset.i,1);render()}
   else if(a==="wtype"){ui.wtype=b.dataset.t;b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}
-  else if(a==="addw"){const v=((document.getElementById("wnote")||{}).value||"").trim().slice(0,140);if(v){addNote(v,ui.wtype==="lehre"?"lehre":"fzg");save();render()}}
+  else if(a==="addw"){const v=((document.getElementById("wnote")||{}).value||"").trim().slice(0,140);if(v){addNote(v,ui.wtype==="lehre"?"lehre":"fzg");markSeen();save();render()}}
   else if(a==="delb"){db.board.splice(+b.dataset.i,1);save();render()}
   else if(a==="setpin"){const g=x=>((document.getElementById(x)||{}).value||"").trim(),o=g("oldpin"),v=g("newpin"),v2=g("newpin2");
     if(o!==db.settings.pin){ui={pinMsg:"Die bisherige PIN stimmt nicht."}}
