@@ -125,6 +125,8 @@ h2{font-size:34px}
 
 textarea{width:100%;min-height:96px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:17px;resize:vertical}
 input[type=password],input[type=text]{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:22px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
+input#station,input#su_station,input#wipe{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
+input[type=password]::placeholder{letter-spacing:normal;font-size:17px}
 label.check{display:flex;gap:10px;align-items:center;font-size:16px}
 label.check input{width:22px;height:22px;accent-color:var(--accent)}
 
@@ -353,12 +355,13 @@ const LS_FAV=["ILS Montabaur","ILS Koblenz","Leitstelle Siegen-Wittgenstein","Le
 const LS_MORE=["# Nordrhein-Westfalen","Leitstelle Kreis Olpe","Leitstelle Oberbergischer Kreis","Leitstelle Rhein-Sieg-Kreis","Leitstelle Bonn","Leitstelle Kreis Euskirchen","# Hessen","Leitstelle Rheingau-Taunus","Leitstelle Wiesbaden"];
 const KEY="status1.v1";
 
-function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{},asp:{},demo:false,since:TODAY(),history:[],collected:[],undo:null,snapId:null,settings:{station:"",askCat:false,pin:"0000",kliniken:KL_FAV,klinikenMore:KL_MORE,leitstellen:LS_FAV,leitstellenMore:LS_MORE}}}
+function blank(){return{counts:{},debriefs:0,cats:{},lessons:[],board:[],place:{},asp:{},demo:false,since:TODAY(),history:[],collected:[],undo:null,snapId:null,settings:{station:"",setupDone:false,askCat:false,pin:"0000",kliniken:KL_FAV,klinikenMore:KL_MORE,leitstellen:LS_FAV,leitstellenMore:LS_MORE}}}
 function load(){
   try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);const b=blank();const s=Object.assign(b.settings,o.settings||{});
     if(JSON.stringify(s.kliniken)==='["Klinik A","Klinik B","Klinik C"]'){s.kliniken=KL_FAV;s.klinikenMore=KL_MORE}
     if(!s.kliniken.includes("Ev. Krankenhaus Selters")&&(s.klinikenMore||[]).includes("Ev. Krankenhaus Selters")&&s.kliniken.join("|")===KL_FAV.filter(x=>x!=="Ev. Krankenhaus Selters").join("|")){s.kliniken=KL_FAV;s.klinikenMore=s.klinikenMore.filter(x=>x!=="Ev. Krankenhaus Selters")}
     if(JSON.stringify(s.leitstellen)==='["Leitstelle"]'){s.leitstellen=LS_FAV;s.leitstellenMore=LS_MORE}
+    if(!o.settings||o.settings.setupDone===undefined)s.setupDone=!!(s.pin&&s.pin!=="0000");
     return Object.assign(b,o,{settings:s})}}catch(e){}
   return blank();
 }
@@ -473,7 +476,7 @@ function vHome(){
     <button class="tile" data-a="go" data-v="wall"><b>Dringender Sprechwunsch</b><span>${(db.board||[]).length} ${(db.board||[]).length===1?"Hinweis":"Hinweise"} für die nächste Besatzung</span></button>
     <button class="tile" data-a="go" data-v="rules"><b>Feedback-Regeln</b><span>Geben &amp; nehmen</span></button>
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
-    <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Kliniken, PIN, Einsatzart</span></button>
+    <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Wache, Kliniken, PIN</span></button>
    </div>
    <p class="small">Prototyp v0.1 · Daten bleiben im Browser dieses Geräts.</p>
   </div>`;
@@ -582,7 +585,13 @@ function vPin(){
    <input type="password" id="pin" inputmode="numeric" maxlength="8" autocomplete="off" aria-label="PIN">
    ${ui.pinErr?`<div class="err">Falsche PIN. Bitte erneut versuchen.</div>`:""}
    <button class="btn primary" data-a="pinok">Öffnen</button>
-   <p class="small">Prototyp: Standard-PIN 0000, änderbar unter Einstellungen.</p>
+   ${ui.forgot?`<div class="card stack" style="gap:10px"><h3>PIN vergessen?</h3>
+     <p class="small" style="margin:0">Die PIN lässt sich ohne die alte PIN nicht ändern. Damit niemand die Auswertung einsehen kann, bleibt nur: <b>alle Daten auf diesem Gerät löschen</b> und die App neu einrichten. Hinweise unter „Dringender Sprechwunsch“ und die Kliniklisten werden dabei ebenfalls gelöscht.</p>
+     <label class="small" for="wipe">Zum Bestätigen LÖSCHEN eintippen</label>
+     <input id="wipe" autocomplete="off" autocapitalize="characters" aria-label="LÖSCHEN eintippen">
+     ${ui.wipeErr?`<div class="err">Bitte genau LÖSCHEN eintippen.</div>`:""}
+     <button class="btn warn" data-a="wipe">Alle Daten löschen und neu einrichten</button></div>`
+    :`<button class="linkbtn" data-a="forgot" style="align-self:flex-start">PIN vergessen?</button>`}
    <button class="btn ghost" data-a="home">Zurück</button></div>`;
 }
 
@@ -664,15 +673,19 @@ function vSettings(){
     <button class="btn" data-a="savelists">Listen speichern</button>
    </div>
    <div class="card stack" style="gap:10px"><h3>PIN für die Auswertung</h3>
-    <input type="password" id="newpin" inputmode="numeric" maxlength="8" placeholder="Neue PIN" autocomplete="off" aria-label="Neue PIN">
-    ${ui.pinMsg?`<div class="small">${ui.pinMsg}</div>`:""}
+    <p class="small" style="margin:0">Die PIN lässt sich nur mit der bisherigen PIN ändern.</p>
+    <input type="password" id="oldpin" inputmode="numeric" maxlength="8" placeholder="Bisherige PIN" autocomplete="off" aria-label="Bisherige PIN">
+    <input type="password" id="newpin" inputmode="numeric" maxlength="8" placeholder="Neue PIN (4 bis 8 Ziffern)" autocomplete="off" aria-label="Neue PIN">
+    <input type="password" id="newpin2" inputmode="numeric" maxlength="8" placeholder="Neue PIN wiederholen" autocomplete="off" aria-label="Neue PIN wiederholen">
+    ${ui.pinMsg?`<div class="${ui.pinOk?"okmsg":"errmsg"}">${ui.pinMsg}</div>`:""}
     <button class="btn" data-a="setpin">PIN ändern</button>
    </div>
    <button class="btn ghost" data-a="home">Zurück</button></div>`;
 }
 
 function render(){
-  const V={home:vHome,heavy:vHeavy,flow:vFlow,done:vDone,wall:vWall,rules:vRules,stats:vStats,settings:vSettings,report:vReport,share:vShare,collect:vCollect};
+  const V={home:vHome,heavy:vHeavy,flow:vFlow,done:vDone,wall:vWall,rules:vRules,stats:vStats,settings:vSettings,report:vReport,share:vShare,collect:vCollect,setup:vSetup};
+  if(!db.settings.setupDone&&view!=="flow"&&view!=="done")view="setup";
   if(view!=="collect")stopCam();
   app.innerHTML=bar()+(V[view]||vHome)();
   tick();
@@ -728,6 +741,38 @@ function loadDemo(){
   save();render();
 }
 
+
+function vSetup(){
+  return `<div class="stack">
+   <div class="eyebrow">Einrichtung</div><h2>Willkommen bei Status 1</h2>
+   <p class="lead">Einmal kurz einrichten, dann ist das Fahrzeughandy bereit. Das macht in der Regel die Wachenleitung.</p>
+   <div class="card stack" style="gap:10px"><h3>1 · Name der Wache</h3>
+    <p class="small" style="margin:0">Erscheint im Bericht. Lässt sich später unter Einstellungen ändern.</p>
+    <input id="su_station" maxlength="60" value="${esc(ui.su_station!==undefined?ui.su_station:(db.settings.station||""))}" placeholder="z. B. Rettungswache Hachenburg" aria-label="Name der Wache">
+   </div>
+   <div class="card stack" style="gap:10px"><h3>2 · PIN für die Auswertung</h3>
+    <p class="small" style="margin:0">Schützt Auswertung und Bericht. 4 bis 8 Ziffern. Später nur mit dieser PIN änderbar, also bitte für die Wachenleitung notieren.</p>
+    <input type="password" id="su_pin" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" aria-label="PIN">
+    <input type="password" id="su_pin2" inputmode="numeric" maxlength="8" placeholder="PIN wiederholen" autocomplete="off" aria-label="PIN wiederholen">
+   </div>
+   ${ui.suErr?`<div class="errmsg">${ui.suErr}</div>`:""}
+   <button class="btn primary" data-a="setupdone">Einrichtung abschließen</button>
+   <p class="small" style="margin:0">Kliniken, Leitstellen und weitere Optionen finden Sie danach unter Einstellungen. Es werden keine Namen von Mitarbeitenden und keine Patientendaten gespeichert.</p>
+  </div>`;
+}
+app.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+  if(a==="setupdone"){const g=x=>((document.getElementById(x)||{}).value||"").trim(),st=g("su_station"),p1=g("su_pin"),p2=g("su_pin2");
+    if(!/^\d{4,8}$/.test(p1)){ui={suErr:"Die PIN muss aus 4 bis 8 Ziffern bestehen.",su_station:st}}
+    else if(p1!==p2){ui={suErr:"Die beiden PINs stimmen nicht überein.",su_station:st}}
+    else if(p1==="0000"||p1==="1234"){ui={suErr:"Bitte keine leicht zu erratende PIN wie 0000 oder 1234 wählen.",su_station:st}}
+    else{db.settings.station=st.slice(0,60);db.settings.pin=p1;db.settings.setupDone=true;save();unlocked=false;view="home";ui={}}
+    render();window.scrollTo(0,0)}
+  else if(a==="forgot"){ui.forgot=true;render()}
+  else if(a==="wipe"){const v=((document.getElementById("wipe")||{}).value||"").trim().toUpperCase();
+    if(v!=="LÖSCHEN"&&v!=="LOESCHEN"){ui.wipeErr=true;render();return}
+    try{localStorage.removeItem(KEY)}catch(err){}db=blank();save();unlocked=false;view="setup";ui={};render();window.scrollTo(0,0)}
+});
 
 // ---------- Bericht, Abschluss, Zusammenführen ----------
 function TODAY(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -1024,8 +1069,11 @@ app.addEventListener("click",e=>{
   else if(a==="wtype"){ui.wtype=b.dataset.t;b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}
   else if(a==="addw"){const v=((document.getElementById("wnote")||{}).value||"").trim().slice(0,140);if(v){addNote(v,ui.wtype==="lehre"?"lehre":"fzg");save();render()}}
   else if(a==="delb"){db.board.splice(+b.dataset.i,1);save();render()}
-  else if(a==="setpin"){const v=((document.getElementById("newpin")||{}).value||"").trim();
-    if(/^\d{4,8}$/.test(v)){db.settings.pin=v;save();ui={pinMsg:"PIN geändert."}}else{ui={pinMsg:"Bitte 4 bis 8 Ziffern eingeben."}}render()}
+  else if(a==="setpin"){const g=x=>((document.getElementById(x)||{}).value||"").trim(),o=g("oldpin"),v=g("newpin"),v2=g("newpin2");
+    if(o!==db.settings.pin){ui={pinMsg:"Die bisherige PIN stimmt nicht."}}
+    else if(!/^\d{4,8}$/.test(v)){ui={pinMsg:"Die neue PIN muss aus 4 bis 8 Ziffern bestehen."}}
+    else if(v!==v2){ui={pinMsg:"Die beiden neuen PINs stimmen nicht überein."}}
+    else{db.settings.pin=v;save();ui={pinMsg:"PIN geändert.",pinOk:true}}render()}
 });
 app.addEventListener("change",e=>{const t=e.target;if(!t.classList||!t.classList.contains("msel")||!run)return;
   const m=t.dataset.mode,id=t.dataset.id;const d=run.det[m][id]=run.det[m][id]||{place:null,asp:[]};d.place=t.value||null;render()});
