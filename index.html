@@ -208,11 +208,11 @@ details>summary{cursor:pointer;padding:4px 0}
 .rp-meta{font-size:8.5pt;color:var(--mu);text-align:right}
 .rp-eyebrow{font-size:7.5pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
 .rp-title h2{margin:1mm 0 0;font-family:var(--display);font-weight:700;font-size:20pt;line-height:1.05}
-.rp-cover h1{margin:2mm 0 0;font-family:var(--display);font-weight:700;font-size:34pt;line-height:.95}
+.rp-cover h1{margin:1.5mm 0 0;font-family:var(--display);font-weight:700;font-size:30pt;line-height:.95}
 .rp-cover .rp-sub{margin-top:2.5mm;font-size:12pt}
 .rp-cover .rp-basis{margin-top:1mm;font-size:9.5pt;color:var(--mu)}
 .rp-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
-.rp-kpi{border:.3mm solid var(--li);border-radius:2mm;padding:3mm 3.5mm;display:flex;flex-direction:column;gap:.5mm}
+.rp-kpi{border:.3mm solid var(--li);border-radius:2mm;padding:2.5mm 3.5mm;display:flex;flex-direction:column;gap:.5mm}
 .rp-kpi b{font-family:var(--display);font-size:24pt;line-height:1}
 .rp-kpi span{font-size:8.5pt;color:var(--mu)}
 .rp-two{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
@@ -220,7 +220,7 @@ details>summary{cursor:pointer;padding:4px 0}
 .rp-top.p{background:var(--pob)} .rp-top.n{background:var(--neb)}
 .rp-top h3{margin:0;font-size:8pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
 .rp-top.p h3{color:var(--po)} .rp-top.n h3{color:var(--ne)}
-.rp-top ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2.4mm}
+.rp-top ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2mm}
 .rp-top li{display:grid;grid-template-columns:6mm 1fr auto;gap:2mm;align-items:baseline}
 .rp-top li .no{font-family:var(--display);font-weight:700;font-size:13pt}
 .rp-top li .nm{font-weight:600;font-size:11pt;line-height:1.2}
@@ -230,6 +230,19 @@ details>summary{cursor:pointer;padding:4px 0}
 .rp-top .none{font-size:9pt;color:var(--mu)}
 .rp-box{border:.3mm solid var(--li);border-radius:2.5mm;padding:4mm 4.5mm;display:flex;flex-direction:column;gap:2mm}
 .rp-box h3{margin:0;font-size:8pt;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}
+.rp-chg2{display:grid;grid-template-columns:1fr 1fr;gap:4mm}
+.rp-chg2 .col{display:flex;flex-direction:column;gap:2mm;padding-left:3mm;border-left:1mm solid}
+.rp-chg2 .col.g{border-color:var(--po)} .rp-chg2 .col.b{border-color:var(--ne)}
+.rp-chg2 h4{margin:0;font-size:8pt;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.rp-chg2 .g h4{color:var(--po)} .rp-chg2 .b h4{color:var(--ne)}
+.rp-ch{display:flex;flex-direction:column;gap:.8mm;padding:1mm 0;border-top:.2mm solid var(--li)}
+.rp-ch:first-of-type{border-top:0}
+.rp-ch .t{font-size:9.5pt;line-height:1.3}
+.rp-ch .cmp{display:grid;grid-template-columns:auto 1fr 8mm auto 1fr 8mm;column-gap:1.5mm;align-items:center;font-size:7.5pt;color:var(--mu)}
+.rp-ch .rbar{display:block;height:2.4mm;background:#eef1f4;border-radius:.6mm;overflow:hidden}
+.rp-ch .rbar i{display:block;height:100%}
+.rp-ch .rbar i.was{background:#b9c2cb} .rp-ch .rbar i.ng{background:var(--ne)} .rp-ch .rbar i.ps{background:var(--po)}
+.rp-ch .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--i)}
 .rp-chg{display:grid;grid-template-columns:5mm 1fr auto;gap:2mm;align-items:baseline;padding:1.2mm 0;border-top:.2mm solid var(--li)}
 .rp-chg:first-of-type{border-top:0}
 .rp-chg .ar{font-weight:700;font-size:11pt}
@@ -266,8 +279,8 @@ details>summary{cursor:pointer;padding:4px 0}
 .rp-minis .rp-det{padding:2.5mm 4mm}
 .rp-minis .rp-det h3{font-size:12pt;margin-bottom:1mm}
 .rp-det td{padding:.55mm 0}
-.rp-areas{display:flex;flex-direction:column;gap:2mm}
-.rp-area{display:grid;grid-template-columns:30mm 1fr 22mm;gap:3mm;align-items:center;font-size:9.5pt}
+.rp-areas{display:flex;flex-direction:column;gap:1.4mm}
+.rp-area{display:grid;grid-template-columns:30mm 1fr 22mm;gap:3mm;align-items:center;font-size:9pt}
 .rp-area .nm{font-weight:600}
 .rp-area .tr{display:flex;height:4mm;border-radius:.8mm;overflow:hidden;background:#eef1f4}
 .rp-area .tr i.p{background:var(--po)} .rp-area .tr i.n{background:var(--ne)}
@@ -747,8 +760,8 @@ function changes(d,prev){
   rRows(d).forEach(r=>{const pv=(prev.t||{})[r.id]||[0,0];
     [["m",1,"besser machen"],["p",0,"lief gut"]].forEach(([f,i,lab])=>{const now=r[f],bef=pv[i];if(Math.max(now,bef)<3)return;
       const a=pct(bef,prev.n),b=pct(now,d.n);if(Math.abs(b-a)<10)return;
-      out.push({n:r.n,lab,a,b,good:f==="m"?b<a:b>a,d:Math.abs(b-a)})})});
-  return out.sort((x,y)=>y.d-x.d).slice(0,4);
+      out.push({n:r.n,f,lab,a,b,good:f==="m"?b<a:b>a,d:Math.abs(b-a)})})});
+  return out.sort((x,y)=>y.d-x.d).slice(0,6);
 }
 function periodText(d){return d.from?dLong(d.from)+" – "+dLong(d.to):"bis "+dLong(d.to)}
 function rpPage(no,total,meta,title,body){
@@ -771,7 +784,12 @@ function reportHtml(d,prev){
    <div class="rp-kpis"><div class="rp-kpi"><b>${d.n}</b><span>Debriefs</span></div><div class="rp-kpi"><b style="color:var(--po)">${tp}</b><span>× lief gut</span></div><div class="rp-kpi"><b style="color:var(--ne)">${tn}</b><span>× besser machen</span></div><div class="rp-kpi"><b>${d.lessons.length}</b><span>Lehren notiert</span></div></div>
    <div class="rp-two"><div class="rp-top p"><h3>Die größten Stärken</h3>${topP.length?`<ol>${topP.map((r,i)=>li(r,"p",i)).join("")}</ol>`:`<p class="none">Noch keine Nennungen.</p>`}</div>
    <div class="rp-top n"><h3>Die wichtigsten Verbesserungsthemen</h3>${topN.length?`<ol>${topN.map((r,i)=>li(r,"n",i)).join("")}</ol>`:`<p class="none">Noch keine Nennungen.</p>`}</div></div>
-   <div class="rp-box"><h3>Veränderung zum letzten Zeitraum</h3>${prev?(chg.length?chg.map(c=>`<div class="rp-chg"><span class="ar ${c.good?"g":"b"}">${c.b<c.a?"↓":"↑"}</span><span><b>${esc(c.n)}</b> · ${c.lab}</span><span class="v">${c.a} % → ${c.b} % der Debriefs</span></div>`).join("")+`<p class="rp-note">Vergleich mit ${periodText({from:prev.from,to:prev.to})} (${prev.n} Debriefs). Angaben in Prozent der Debriefs, damit unterschiedlich lange Zeiträume vergleichbar sind.</p>`:`<p class="rp-note">Keine deutlichen Veränderungen gegenüber ${periodText({from:prev.from,to:prev.to})}.</p>`):`<p class="rp-note">Der Vergleich erscheint ab dem nächsten Bericht.</p>`}</div>
+   <div class="rp-box"><h3>Veränderung zum letzten Zeitraum</h3>${prev?(()=>{
+     const say=c=>c.f==="m"?(c.b<c.a?"wird seltener als Problem genannt":"wird häufiger als Problem genannt"):(c.b>c.a?"wird häufiger als Stärke genannt":"wird seltener als Stärke genannt");
+     const row=c=>`<div class="rp-ch"><div class="t"><b>${esc(c.n)}</b> ${say(c)}</div><div class="cmp"><span class="k">vorher</span><span class="rbar"><i class="was" style="width:${Math.min(100,c.a)}%"></i></span><span class="v">${c.a} %</span><span class="k">jetzt</span><span class="rbar"><i class="${c.good?"ps":"ng"}" style="width:${Math.min(100,c.b)}%"></i></span><span class="v">${c.b} %</span></div></div>`;
+     const G=chg.filter(c=>c.good).slice(0,3),B=chg.filter(c=>!c.good).slice(0,3);
+     return `<div class="rp-chg2"><div class="col g"><h4>Positiv entwickelt</h4>${G.length?G.map(row).join(""):`<p class="rp-note">Keine deutliche Verbesserung.</p>`}</div><div class="col b"><h4>Im Blick behalten</h4>${B.length?B.map(row).join(""):`<p class="rp-note">Keine deutliche Verschlechterung.</p>`}</div></div>
+      <p class="rp-note">Vergleich mit ${periodText({from:prev.from,to:prev.to})} (${prev.n} Debriefs). Prozent = Anteil der Debriefs, in denen das Thema genannt wurde. So sind unterschiedlich lange Zeiträume vergleichbar. Gezeigt werden Veränderungen ab 10 Prozentpunkten.</p>`})():`<p class="rp-note">Der Vergleich erscheint ab dem nächsten Bericht.</p>`}</div>
    <div class="rp-box"><h3>Nach Bereichen</h3><div class="rp-areas">${(()=>{const A=TAGS.map(g=>{let p=0,m=0;g.items.forEach(([id])=>{const r=rows.find(x=>x.id===id);p+=r.p;m+=r.m});return{g:g.g,p,m}});const mx=Math.max(1,...A.map(a=>a.p+a.m));
      return A.map(a=>`<div class="rp-area"><span class="nm">${a.g}</span><span class="tr"><i class="p" style="width:${(a.p/mx*100).toFixed(1)}%"></i><i class="n" style="width:${(a.m/mx*100).toFixed(1)}%"></i></span><span class="v"><b style="color:var(--po)">${a.p}</b> · <b style="color:var(--ne)">${a.m}</b></span></div>`).join("")})()}</div></div>
    ${d.n<10?`<p class="rp-note">Hinweis: Bei weniger als 10 Debriefs zeigen die Zahlen nur eine Tendenz.</p>`:""}`;
