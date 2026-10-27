@@ -125,7 +125,8 @@ h2{font-size:34px}
 
 textarea{width:100%;min-height:96px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:17px;resize:vertical}
 input[type=password],input[type=text]{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:22px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
-input#station,input#su_station,input#wipe,input#shifts{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
+select.shiftsel{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 12px;font:inherit;font-size:17px}
+input#station,input#su_station,input#wipe,input.shiftin{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
 input[type=password]::placeholder{letter-spacing:normal;font-size:17px}
 label.check{display:flex;gap:10px;align-items:center;font-size:16px}
 label.check input{width:22px;height:22px;accent-color:var(--accent)}
@@ -562,7 +563,7 @@ function vWall(){
   return `<div class="stack">
    <div class="readaloud"><span class="key s" style="background:var(--accent);color:var(--accent-fg);box-shadow:none">!</span><span class="eyebrow">Für die nächste Besatzung</span></div>
    <h2>Dringender Sprechwunsch</h2>
-   ${(db.board||[]).some(e=>e.k==="fzg")?`<p class="small" style="margin:0">Als gelesen markiert für diese Schicht. Auf der Startseite erscheinen die Hinweise zum Fahrzeug erst nach dem nächsten Schichtwechsel wieder, neue Hinweise sofort.</p>`:""}
+   ${(db.board||[]).some(e=>e.k==="fzg")?`<p class="small" style="margin:0">Für diese Schicht als gelesen markiert. Oben auf der Startseite erscheinen die Hinweise zum Fahrzeug erst nach dem nächsten Schichtwechsel wieder.</p>`:""}
    <p class="lead">Was frühere Besatzungen auf diesem Fahrzeug weitergeben: Lehren aus Einsätzen und Hinweise zum Fahrzeug, ohne Datum und ohne Namen. Entfernte Lehren bleiben anonym in der Auswertung der Wache.</p>
    ${B.length?group("Lehren aus Einsätzen","Aus Debriefs früherer Besatzungen.",L)+group("Zum Fahrzeug","Defekte, fehlendes Material, Besonderheiten. Bitte als erledigt markieren, wenn behoben.",F):`<div class="hint">Gerade keine Hinweise. Lehren kommen aus dem Debrief, Hinweise zum Fahrzeug direkt von hier.</div>`}
    <div class="card stack" style="gap:8px"><h3>Hinweis hinzufügen</h3>
@@ -654,8 +655,8 @@ function vSettings(){
     <p class="small" style="margin:0">Standardmäßig aus. Auf kleinen Wachen kann die Einsatzart einen Einsatz erkennbar machen.</p>
    </div>
    <div class="card stack" style="gap:10px"><h3>Schichtwechsel</h3>
-    <p class="small" style="margin:0">Uhrzeiten, zu denen die Schicht wechselt, durch Komma getrennt, zum Beispiel „07:00, 18:00“. Gelesene Hinweise zum Fahrzeug erscheinen dann erst in der nächsten Schicht wieder oben auf der Startseite.</p>
-    <input id="shifts" maxlength="60" value="${esc(db.settings.shifts||"07:00, 18:00")}" aria-label="Schichtwechsel-Uhrzeiten">
+    <p class="small" style="margin:0">Damit die App weiß, wann eine neue Besatzung kommt. Gelesene Hinweise zum Fahrzeug erscheinen erst nach dem nächsten Schichtwechsel wieder oben auf der Startseite. Eigene Uhrzeiten durch Komma trennen.</p>
+    ${shiftPicker("",db.settings.shifts)}
     ${ui.shMsg?`<div class="${ui.shOk?"okmsg":"errmsg"}">${ui.shMsg}</div>`:""}
     <button class="btn" data-a="saveshifts">Speichern</button>
    </div>
@@ -707,8 +708,17 @@ function shiftTimes(){const t=(db.settings.shifts||"07:00, 18:00").split(/[,;\s]
 function curShift(){const T=shiftTimes(),n=new Date(),m=n.getHours()*60+n.getMinutes();let d=new Date(n),st=null;
   for(const x of T)if(x<=m)st=x;if(st===null){d.setDate(d.getDate()-1);st=T[T.length-1]}
   return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+"T"+st}
-function unseenFzg(){const F=(db.board||[]).filter(e=>e.k==="fzg"),sn=db.seen&&db.seen.shift===curShift()?db.seen.t:[];return F.filter(e=>!sn.includes(e.t))}
-function markSeen(){db.seen={shift:curShift(),t:(db.board||[]).filter(e=>e.k==="fzg").map(e=>e.t)};save()}
+function unseenFzg(){const F=(db.board||[]).filter(e=>e.k==="fzg");return db.seen&&db.seen.shift===curShift()?[]:F}
+function markSeen(){db.seen={shift:curShift()};save()}
+const SHIFT_PRESETS=[["07:00, 18:00","07–18 Uhr und 18–07 Uhr"],["07:00, 19:00","07–19 Uhr und 19–07 Uhr"],["06:00, 18:00","06–18 Uhr und 18–06 Uhr"],["06:00, 14:00, 22:00","Drei Schichten: 06, 14 und 22 Uhr"],["07:00","24-Stunden-Dienst, Wechsel um 07 Uhr"],["custom","Eigene Uhrzeiten"]];
+function shiftPicker(px,cur){cur=cur||"07:00, 18:00";const pre=SHIFT_PRESETS.some(x=>x[0]===cur);
+  return `<select id="${px}shiftsel" class="shiftsel" data-px="${px}" aria-label="Schichtzeiten">${SHIFT_PRESETS.map(([v,l])=>`<option value="${v}" ${(pre?v===cur:v==="custom")?"selected":""}>${l}</option>`).join("")}</select>
+   <input id="${px}shifts" class="shiftin" maxlength="60" value="${esc(cur)}" placeholder="z. B. 06:30, 18:30" aria-label="Eigene Schichtwechsel-Uhrzeiten" ${pre?"hidden":""}>`}
+function readShift(px){const sel=(document.getElementById(px+"shiftsel")||{}).value||"07:00, 18:00";
+  if(sel!=="custom")return sel;
+  const parts=((document.getElementById(px+"shifts")||{}).value||"").trim().split(/[,;\s]+/).filter(Boolean);
+  const ok=parts.length>0&&parts.every(x=>{const m=/^(\d{1,2}):(\d{2})$/.exec(x);return m&&+m[1]<24&&+m[2]<60});
+  return ok?parts.map(x=>x.padStart(5,"0")).join(", "):null}
 
 function tick(){
   if(view!=="flow"||!run)return;
@@ -769,6 +779,10 @@ function vSetup(){
     <input type="password" id="su_pin" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" aria-label="PIN">
     <input type="password" id="su_pin2" inputmode="numeric" maxlength="8" placeholder="PIN wiederholen" autocomplete="off" aria-label="PIN wiederholen">
    </div>
+   <div class="card stack" style="gap:10px"><h3>3 · Schichtzeiten</h3>
+    <p class="small" style="margin:0">Wann wechselt die Besatzung auf diesem Fahrzeug? Hinweise zum Fahrzeug werden zu Beginn jeder Schicht einmal oben angezeigt.</p>
+    ${shiftPicker("su_",ui.su_shifts||db.settings.shifts)}
+   </div>
    ${ui.suErr?`<div class="errmsg">${ui.suErr}</div>`:""}
    <button class="btn primary" data-a="setupdone">Einrichtung abschließen</button>
    <p class="small" style="margin:0">Kliniken, Leitstellen und weitere Optionen finden Sie danach unter Einstellungen. Es werden keine Namen von Mitarbeitenden und keine Patientendaten gespeichert.</p>
@@ -776,16 +790,16 @@ function vSetup(){
 }
 app.addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
-  if(a==="setupdone"){const g=x=>((document.getElementById(x)||{}).value||"").trim(),st=g("su_station"),p1=g("su_pin"),p2=g("su_pin2");
+  if(a==="setupdone"){const g=x=>((document.getElementById(x)||{}).value||"").trim(),st=g("su_station"),p1=g("su_pin"),p2=g("su_pin2"),sh=readShift("su_");
     if(!/^\d{4,8}$/.test(p1)){ui={suErr:"Die PIN muss aus 4 bis 8 Ziffern bestehen.",su_station:st}}
     else if(p1!==p2){ui={suErr:"Die beiden PINs stimmen nicht überein.",su_station:st}}
     else if(p1==="0000"||p1==="1234"){ui={suErr:"Bitte keine leicht zu erratende PIN wie 0000 oder 1234 wählen.",su_station:st}}
-    else{db.settings.station=st.slice(0,60);db.settings.pin=p1;db.settings.setupDone=true;save();unlocked=false;view="home";ui={}}
+    else if(!sh){ui={suErr:"Bitte eigene Schichtzeiten im Format 07:00 eingeben, durch Komma getrennt.",su_station:st}}
+    else{db.settings.station=st.slice(0,60);db.settings.pin=p1;db.settings.shifts=sh;db.settings.setupDone=true;save();unlocked=false;view="home";ui={}}
     render();window.scrollTo(0,0)}
   else if(a==="forgot"){ui.forgot=true;render()}
-  else if(a==="saveshifts"){const v=((document.getElementById("shifts")||{}).value||"").trim(),parts=v.split(/[,;\s]+/).filter(Boolean);
-    const ok=parts.length>0&&parts.every(x=>{const m=/^(\d{1,2}):(\d{2})$/.exec(x);return m&&+m[1]<24&&+m[2]<60});
-    if(ok){db.settings.shifts=parts.map(x=>x.padStart(5,"0")).join(", ");save();ui={shMsg:"Gespeichert.",shOk:true}}else{ui={shMsg:"Bitte Uhrzeiten im Format 07:00 eingeben, durch Komma getrennt."}}render()}
+  else if(a==="saveshifts"){const v=readShift("");
+    if(v){db.settings.shifts=v;db.seen=null;save();ui={shMsg:"Gespeichert.",shOk:true}}else{ui={shMsg:"Bitte Uhrzeiten im Format 07:00 eingeben, durch Komma getrennt."}}render()}
   else if(a==="wipe"){const v=((document.getElementById("wipe")||{}).value||"").trim().toUpperCase();
     if(v!=="LÖSCHEN"&&v!=="LOESCHEN"){ui.wipeErr=true;render();return}
     try{localStorage.removeItem(KEY)}catch(err){}db=blank();save();unlocked=false;view="setup";ui={};render();window.scrollTo(0,0)}
@@ -1048,6 +1062,8 @@ app.addEventListener("click",async e=>{
   else if(a==="uncollect"){(db.collected||[]).splice(+b.dataset.i,1);save();render()}
   else if(a==="savestation"){db.settings.station=((document.getElementById("station")||{}).value||"").trim().slice(0,60);save();ui={stMsg:"Gespeichert."};render()}
 });
+app.addEventListener("change",e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains("shiftsel"))return;
+  const inp=document.getElementById(t.dataset.px+"shifts");if(inp){inp.hidden=t.value!=="custom";if(t.value==="custom")inp.focus()}});
 app.addEventListener("change",e=>{const t=e.target;if(!t||t.id!=="s1file"||!t.files||!t.files[0])return;
   const r=new FileReader();r.onload=()=>{try{addCollected(JSON.parse(r.result))}catch(err){ui.err="Die Datei konnte nicht gelesen werden.";ui.ok=null}render()};r.readAsText(t.files[0])});
 
