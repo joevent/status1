@@ -462,7 +462,7 @@ function rulesCard(){
 
 function vHome(){
   return `<div class="stack">
-   ${(db.board||[]).length?`<button class="s0" data-a="go" data-v="wall"><span class="key s0k">!</span><span><b>Dringender Sprechwunsch: ${db.board.length===1?"1 Hinweis":db.board.length+" Hinweise"} für euch</b><br><small>Vor dem nächsten Einsatz kurz lesen</small></span></button>`:""}
+   ${(()=>{const f=(db.board||[]).filter(e=>e.k==="fzg").length;return f?`<button class="s0" data-a="go" data-v="wall"><span class="key s0k">!</span><span><b>Dringender Sprechwunsch: ${f===1?"1 Hinweis":f+" Hinweise"} zum Fahrzeug</b><br><small>Vor dem nächsten Einsatz kurz lesen</small></span></button>`:""})()}
    <div class="hero"><span class="key xl" aria-hidden="true">1</span>
     <div class="stack" style="gap:6px"><h1>Erst Debrief, dann Status 1.</h1></div></div>
    <p class="lead">Zwei Minuten auf der Rückfahrt. Wer nicht fährt, liest vor. Die App gibt die Fragen und die Zeit vor.</p>
@@ -473,7 +473,7 @@ function vHome(){
     <button class="btn warn" data-a="go" data-v="heavy">Belastender<br>Einsatz</button>
    </div>
    <div class="linkrow">
-    <button class="tile" data-a="go" data-v="wall"><b>Dringender Sprechwunsch</b><span>${(db.board||[]).length} ${(db.board||[]).length===1?"Hinweis":"Hinweise"} für die nächste Besatzung</span></button>
+    <button class="tile" data-a="go" data-v="wall"><b>Dringender Sprechwunsch</b><span>${(()=>{const B=db.board||[],f=B.filter(e=>e.k==="fzg").length,l=B.length-f;return [f?f+" zum Fahrzeug":"",l?l+(l===1?" Lehre":" Lehren"):""].filter(Boolean).join(" · ")||"Hinweise für die nächste Besatzung"})()}</span></button>
     <button class="tile" data-a="go" data-v="rules"><b>Feedback-Regeln</b><span>Geben &amp; nehmen</span></button>
     <button class="tile" data-a="go" data-v="stats"><b>Auswertung</b><span>Für Wachenleitung, mit PIN</span></button>
     <button class="tile" data-a="go" data-v="settings"><b>Einstellungen</b><span>Wache, Kliniken, PIN</span></button>
