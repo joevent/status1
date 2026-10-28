@@ -126,7 +126,7 @@ h2{font-size:34px}
 textarea{width:100%;min-height:96px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:17px;resize:vertical}
 input[type=password],input[type=text]{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:22px;letter-spacing:.3em;font-variant-numeric:tabular-nums}
 select.shiftsel{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 12px;font:inherit;font-size:17px}
-input#station,input#su_station,input#wipe,input.shiftin{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
+input#station,input#su_station,input#wipe,input.shiftin,input.srvin{width:100%;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:10px 12px;font-size:18px}
 input[type=password]::placeholder{letter-spacing:normal;font-size:17px}
 label.check{display:flex;gap:10px;align-items:center;font-size:16px}
 label.check input{width:22px;height:22px;accent-color:var(--accent)}
@@ -463,6 +463,7 @@ function rulesCard(){
 
 function vHome(){
   return `<div class="stack">
+   ${joinMsg?`<div class="okmsg">${esc(joinMsg)}</div>`:""}
    ${(()=>{const f=unseenFzg().length;return f?`<button class="s0" data-a="go" data-v="wall"><span class="key s0k">!</span><span><b>Dringender Sprechwunsch: ${f===1?"1 Hinweis":f+" Hinweise"} zum Fahrzeug</b><br><small>Vor dem nächsten Einsatz kurz lesen</small></span></button>`:""})()}
    <div class="hero"><span class="key xl" aria-hidden="true">1</span>
     <div class="stack" style="gap:6px"><h1>Erst Debrief, dann Status 1.</h1></div></div>
@@ -654,6 +655,17 @@ function vSettings(){
     <label class="check"><input type="checkbox" id="askCat" data-a="askcat" ${db.settings.askCat?"checked":""}> Einsatzart abfragen (freiwillig, überspringbar)</label>
     <p class="small" style="margin:0">Standardmäßig aus. Auf kleinen Wachen kann die Einsatzart einen Einsatz erkennbar machen.</p>
    </div>
+   <div class="card stack" style="gap:10px"><h3>Zentrale Auswertung</h3>
+    ${srvStatus()}
+    <p class="small" style="margin:0">Optional. Debriefs werden zusätzlich gebündelt an den Server der Wache übertragen: nur Zählerstände und Lehren, ohne Uhrzeit, ohne Fahrzeug, ohne Namen. Am einfachsten über den QR-Code im Wachenportal verbinden.</p>
+    <label class="small" for="srv">Adresse des Servers</label>
+    <input id="srv" class="srvin" maxlength="120" value="${esc(db.settings.server||"")}" placeholder="z. B. http://192.168.1.20:8099" autocomplete="off">
+    <label class="small" for="scode">Wachen-Code</label>
+    <input id="scode" class="srvin" maxlength="20" value="${esc(db.settings.code||"")}" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters">
+    ${ui.srvMsg?`<div class="${ui.srvOk?"okmsg":"errmsg"}">${esc(ui.srvMsg)}</div>`:""}
+    <div class="two"><button class="btn" data-a="savesrv">Speichern</button><button class="btn" data-a="sendnow" ${db.settings.server&&db.settings.code?"":"disabled"}>Jetzt senden</button></div>
+    ${db.settings.server?`<button class="linkbtn" data-a="unlinksrv" style="align-self:flex-start">Verbindung trennen</button>`:""}
+   </div>
    <div class="card stack" style="gap:10px"><h3>Schichtwechsel</h3>
     <p class="small" style="margin:0">Damit die App weiß, wann eine neue Besatzung kommt. Gelesene Hinweise zum Fahrzeug erscheinen erst nach dem nächsten Schichtwechsel wieder oben auf der Startseite. Eigene Uhrzeiten durch Komma trennen.</p>
     ${shiftPicker("",db.settings.shifts)}
@@ -746,6 +758,7 @@ function finish(){
   if(run.cat)db.cats[run.cat]=(db.cats[run.cat]||0)+1;
   flushNote();
   run.notes.forEach(e=>addNote(e.t,e.k));
+  queueDelta(run);
   const l=run.notes.length;
   save();
   const last={p:run.pos.size,n:run.neg.size,l:l};
@@ -803,6 +816,66 @@ app.addEventListener("click",e=>{
   else if(a==="wipe"){const v=((document.getElementById("wipe")||{}).value||"").trim().toUpperCase();
     if(v!=="LÖSCHEN"&&v!=="LOESCHEN"){ui.wipeErr=true;render();return}
     try{localStorage.removeItem(KEY)}catch(err){}db=blank();save();unlocked=false;view="setup";ui={};render();window.scrollTo(0,0)}
+});
+
+// ---------- Zentrale Auswertung (Server) ----------
+const BATCH=3;
+let joinMsg=null,sending=false;
+function normCode(c){c=String(c||"").replace(/[^0-9a-z]/gi,"").toUpperCase();return c.length===12?c.slice(0,4)+"-"+c.slice(4,8)+"-"+c.slice(8):""}
+function curMonth(){return TODAY().slice(0,7)}
+function queueDelta(r){
+  if(!db.settings.server||!db.settings.code)return;
+  db.outbox=db.outbox||{};const m=curMonth(),o=db.outbox[m]=db.outbox[m]||{month:m,n:0,counts:{},place:{},asp:{},cats:{},lessons:[]};
+  o.n++;
+  r.pos.forEach(id=>{(o.counts[id]=o.counts[id]||{pos:0,neg:0}).pos++});
+  r.neg.forEach(id=>{(o.counts[id]=o.counts[id]||{pos:0,neg:0}).neg++});
+  ["pos","neg"].forEach(md=>{(md==="pos"?r.pos:r.neg).forEach(id=>{const d=r.det[md][id];if(!d)return;
+    if(d.place){const k=md+"|"+id+"|"+d.place;o.place[k]=(o.place[k]||0)+1}
+    d.asp.forEach(x=>{const k=md+"|"+id+"|"+x;o.asp[k]=(o.asp[k]||0)+1})})});
+  if(r.cat)o.cats[r.cat]=(o.cats[r.cat]||0)+1;
+  r.notes.forEach(e=>{if(e.k==="lehre")o.lessons.push(e.t)});
+  if(!db.outboxSince)db.outboxSince=TODAY();
+  save();setTimeout(()=>trySend(false),1500+Math.random()*8000);
+}
+function pendingN(){return Object.values(db.outbox||{}).reduce((a,o)=>a+o.n,0)}
+async function trySend(force){
+  const S=db.settings;if(sending||!S.server||!S.code)return false;
+  const n=pendingN();if(!n)return false;
+  if(!force&&n<BATCH&&!(db.outboxSince&&db.outboxSince<TODAY()))return false;
+  if(location.protocol==="https:"&&/^http:/i.test(S.server)){db.sendErr="Diese App-Version läuft über https und darf den Testserver (http) nicht erreichen. Bitte die App über den QR-Code im Wachenportal öffnen.";save();return false}
+  sending=true;
+  try{
+    const packets=Object.values(db.outbox).sort((a,b)=>a.month<b.month?-1:1).slice(0,3).map(o=>Object.assign({},o,{lessons:shuffle(o.lessons.slice()).slice(0,20)}));
+    const res=await fetch(S.server.replace(/\/+$/,"")+"/api/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:S.code,packets})});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(j.error||("Fehler "+res.status));
+    packets.forEach(p=>{delete db.outbox[p.month]});
+    if(!pendingN())db.outboxSince=null;
+    db.lastSent=TODAY();db.sendErr=null;save();sending=false;
+    if(view==="settings")render();return true;
+  }catch(e){db.sendErr=e.message==="Failed to fetch"?"Server nicht erreichbar. Die Debriefs bleiben gespeichert und werden später übertragen.":e.message;save();sending=false;if(view==="settings")render();return false}
+}
+function srvStatus(){const S=db.settings;if(!S.server||!S.code)return `<p class="small" style="margin:0"><b>Nicht verbunden.</b></p>`;
+  const n=pendingN();
+  return `<p class="small" style="margin:0"><b>Verbunden</b> mit ${esc(S.server)} · Code …${esc(S.code.slice(-4))}<br>${n?n+(n===1?" Debrief wartet":" Debriefs warten")+" auf Übertragung (ab "+BATCH+" oder am nächsten Tag)":"Alles übertragen"}${db.lastSent?" · zuletzt am "+dLong(db.lastSent):""}</p>${db.sendErr?`<div class="errmsg">${esc(db.sendErr)}</div>`:""}`}
+(function joinFromLink(){
+  try{const u=new URL(location.href),w=normCode(u.searchParams.get("w"));if(!w)return;
+    const s=u.searchParams.get("s")||(/\/app\/?/.test(u.pathname)?location.origin:"");
+    if(s){db.settings.server=s;db.settings.code=w;save();joinMsg="Mit der Wache verbunden. Debriefs werden ab jetzt gebündelt an die Wache übertragen."}
+    u.searchParams.delete("w");u.searchParams.delete("s");history.replaceState(null,"",u.pathname+u.search+u.hash);
+  }catch(e){}
+})();
+window.addEventListener("online",()=>trySend(false));
+setTimeout(()=>trySend(false),3000);
+app.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
+  if(a==="savesrv"){const sv=((document.getElementById("srv")||{}).value||"").trim().replace(/\/+$/,""),cd=normCode((document.getElementById("scode")||{}).value);
+    if(sv&&!/^https?:\/\/[^\s/]+(:\d+)?$/i.test(sv)){ui={srvMsg:"Bitte die Adresse vollständig angeben, zum Beispiel http://192.168.1.20:8099"};return render()}
+    if(sv&&!cd){ui={srvMsg:"Der Wachen-Code hat 12 Zeichen, zum Beispiel K7P4-Q2M9-XH3T."};return render()}
+    db.settings.server=sv;db.settings.code=sv?cd:"";db.sendErr=null;save();ui={srvMsg:sv?"Gespeichert.":"Verbindung getrennt.",srvOk:true};render()}
+  else if(a==="sendnow"){if(b.disabled)return;const ok=await trySend(true);ui={srvMsg:ok?"Übertragen.":(pendingN()?(db.sendErr||"Nicht übertragen."):"Es gibt nichts zu übertragen."),srvOk:ok||!pendingN()};render()}
+  else if(a==="unlinksrv"){db.settings.server="";db.settings.code="";db.outbox={};db.outboxSince=null;db.sendErr=null;save();ui={srvMsg:"Verbindung getrennt. Nicht übertragene Debriefs bleiben nur auf diesem Gerät.",srvOk:true};render()}
+  else if(a==="go"||a==="home"){joinMsg=null}
 });
 
 // ---------- Bericht, Abschluss, Zusammenführen ----------
